@@ -1,0 +1,127 @@
+<title>Swell Fund</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;500;700&display=swap">
+<style>/*__CSS__*/</style>
+
+<header class="topbar">
+  <div class="brand"><b>Swell&nbsp;Fund</b><span>Runway &amp; route · 2026–2029</span></div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="treasure" aria-selected="true" aria-controls="treasure">Treasure</button>
+    <button role="tab" data-tab="adventure" aria-selected="false" aria-controls="adventure">Adventure</button>
+  </nav>
+  <span class="verdict no" id="verdict"><span class="dot"></span>Loading</span>
+  <button class="ghost" data-reset>Reset to CSV</button>
+</header>
+
+<main class="wrap">
+
+  <!-- ================= TREASURE ================= -->
+  <section id="treasure" class="stack" role="tabpanel" aria-label="Treasure — the financial model">
+
+    <div class="split hero">
+      <div class="kpis" id="kpis"></div>
+      <div class="card gauge-card">
+        <div class="card-h">Can I leave?<span class="rule"></span><em>Catch the swell</em></div>
+        <div id="gauge"></div>
+      </div>
+    </div>
+
+    <div class="flags" id="flags"></div>
+
+    <div class="card">
+      <div class="card-h">The controls<span class="rule"></span><em>Every assumption is a dial</em></div>
+      <div id="levers"></div>
+    </div>
+
+    <div class="split">
+      <div class="card">
+        <div class="card-h">Cash trajectory<span class="rule"></span><em>Today → home again</em></div>
+        <div id="traj"></div>
+      </div>
+      <div class="card" id="glance"></div>
+    </div>
+
+    <div class="split-even">
+      <div class="card">
+        <div class="card-h">World surf plan<span class="rule"></span><em>Where the money goes</em></div>
+        <div id="plan"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">What actually closes the gap<span class="rule"></span><em>Levers, ranked</em></div>
+        <div id="levrank"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Home-break overhead audit<span class="rule"></span><em>US and business costs that follow you</em></div>
+      <div id="audit"></div>
+    </div>
+
+    <div class="g-3 grid">
+      <div class="card">
+        <div class="card-h">The swell ladder<span class="rule"></span><em>Remote income</em></div>
+        <div id="ladder"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">Break-even remote income<span class="rule"></span></div>
+        <div id="breakeven"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">One more month?<span class="rule"></span></div>
+        <div id="onemore"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Scenarios<span class="rule"></span><em>Side by side</em></div>
+      <div id="scen"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Assumptions &amp; audit trail<span class="rule"></span><em>Every input, every formula</em></div>
+      <div id="inputs"></div>
+    </div>
+
+  </section>
+
+  <!-- ================= ADVENTURE ================= -->
+  <section id="adventure" class="stack" role="tabpanel" aria-label="Adventure — the route" hidden>
+
+    <div class="card">
+      <div class="card-h">The chart<span class="rule"></span><em>Tap a break to add it to the course</em></div>
+      <div class="chipbar" id="monthchips" style="margin-bottom:12px"></div>
+      <div id="ocean"></div>
+      <p class="hint" style="margin-top:12px">Pacific-centred, so the whole surf belt reads left to right: Asia and the Indian Ocean, then Oceania, then the Americas. Filled dots are on your course; the dotted line is the course itself, starting from the home break.</p>
+    </div>
+
+    <div class="card" id="course-card">
+      <div class="card-h">The course<span class="rule"></span><em>Reorder, restretch, remove</em></div>
+      <div id="coursefoot"></div>
+      <div class="legs" id="course"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Logistics between legs<span class="rule"></span><em>Hops, distances, board bags</em></div>
+      <div id="logistics"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Work blocks<span class="rule"></span><em>What each leg can actually support</em></div>
+      <div id="workblocks"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">The break library<span class="rule"></span><em>Seasons, costs, visas, hazards</em></div>
+      <div class="chipbar" id="regionchips" style="margin-bottom:14px"></div>
+      <div class="spots" id="library"></div>
+    </div>
+
+  </section>
+
+  <p class="foot-note" style="margin-top:26px">Built from your planning CSV. Placeholder lines are marked in the audit trail; three recurring lines the CSV missed are marked <span class="tag added">Added</span>. Nothing is saved anywhere but this browser — your figures never leave the page.</p>
+</main>
+
+<script>/*__MODEL__*/</script>
+<script>/*__SPOTS__*/</script>
+<script>/*__APP__*/</script>
