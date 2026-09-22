@@ -17,6 +17,8 @@
   S.monthFilter = 0;          // 0 = any month
   S.regionFilter = 'all';
   S.assign = {};              // legKey -> project id
+  S.tasks = SFTASKS.seed();
+  S.intFilter = { pre: 'all', abroad: 'all' };
   syncMonths();
   load();
 
@@ -41,6 +43,8 @@
       var v = JSON.parse(raw);
       Object.keys(v).forEach(function (k) { S[k] = v[k]; });
       if (!S.route || !S.route.length) S.route = SFSPOTS.DEFAULT_ROUTE.map(function (l, i) { return mkLeg(l.spot, l.months, i); });
+      if (!S.tasks) S.tasks = SFTASKS.seed();
+      if (!S.intFilter) S.intFilter = { pre: 'all', abroad: 'all' };
       syncMonths();
     } catch (e) {}
   }
@@ -75,9 +79,12 @@
     document.querySelectorAll('.tabs button').forEach(function (b) {
       b.setAttribute('aria-selected', String(b.dataset.tab === S.tab));
     });
-    document.getElementById('treasure').hidden = S.tab !== 'treasure';
-    document.getElementById('adventure').hidden = S.tab !== 'adventure';
-    if (S.tab === 'treasure') renderTreasure(keepLevers); else renderAdventure();
+    ['treasure', 'adventure', 'integrity'].forEach(function (id) {
+      document.getElementById(id).hidden = S.tab !== id;
+    });
+    if (S.tab === 'treasure') renderTreasure(keepLevers);
+    else if (S.tab === 'adventure') renderAdventure();
+    else renderIntegrity();
     save();
   }
 
@@ -924,8 +931,207 @@
   }
 
   /* ======================================================================
+     INTEGRITY
+     ====================================================================== */
+
+  var CATS = SFTASKS.CATS;
+  var CATNAME = {}; CATS.forEach(function (c) { CATNAME[c.id] = c.label; });
+
+  function renderIntegrity() {
+    document.getElementById('int-kpis').innerHTML = intKpisHTML();
+    document.getElementById('int-cats').innerHTML = catBarsHTML();
+    document.getElementById('int-next').innerHTML = nextUpHTML();
+    document.getElementById('int-filter-pre').innerHTML = intFilterHTML('pre');
+    document.getElementById('int-filter-ab').innerHTML = intFilterHTML('abroad');
+    document.getElementById('int-pre').innerHTML = listHTML('pre');
+    document.getElementById('int-abroad').innerHTML = listHTML('abroad');
+    document.getElementById('int-done').innerHTML = doneHTML();
+    document.getElementById('pre-count').textContent = countLabel('pre');
+    document.getElementById('ab-count').textContent = countLabel('abroad');
+    fillAddForm();
+  }
+
+  function tasksIn(list) { return S.tasks.filter(function (t) { return t.list === list; }); }
+  function openIn(list) { return tasksIn(list).filter(function (t) { return !t.done; }); }
+  function countLabel(list) {
+    var all = tasksIn(list), done = all.length - openIn(list).length;
+    return done + ' of ' + all.length + ' done';
+  }
+
+  /* "by" options. Pre-departure items hang off real calendar months; on-the-road
+     items hang off the legs of the course. */
+  function byOptions(list) {
+    var out = [];
+    if (list === 'pre') {
+      out.push({ v: '', label: 'Before departure' });
+      for (var i = 1; i <= S.monthsToDeparture; i++) out.push({ v: 'm' + i, label: 'By ' + monthLabel(tripDate(i)) });
+    } else {
+      out.push({ v: '', label: 'Anytime' });
+      out.push({ v: 'monthly', label: 'Every month' });
+      legMonths().forEach(function (s2) {
+        out.push({ v: 'leg:' + s2.leg.key, label: byId[s2.leg.spot].name + ' · ' + monthLabel(tripDate(s2.start)) });
+      });
+    }
+    return out;
+  }
+  function byLabel(t) {
+    var o = byOptions(t.list).filter(function (x) { return x.v === t.by; })[0];
+    if (o) return o.label;
+    if (t.list === 'pre') return 'Before departure';
+    return t.by && t.by.indexOf('leg:') === 0 ? 'Leg no longer on the course' : 'Anytime';
+  }
+  function byRank(t) {
+    if (t.list === 'pre') return t.by ? parseInt(t.by.slice(1), 10) : 99;
+    if (t.by === 'monthly') return 0;
+    if (t.by && t.by.indexOf('leg:') === 0) {
+      var i = idx(t.by.slice(4));
+      return i < 0 ? 98 : i + 1;
+    }
+    return 99;
+  }
+  function urgency(t) {
+    if (t.list !== 'pre' || !t.by || t.done) return '';
+    var m = parseInt(t.by.slice(1), 10);
+    if (m <= 1) return 'overdue';
+    if (m <= 3) return 'soon';
+    return '';
+  }
+
+  function intKpisHTML() {
+    var pre = tasksIn('pre'), ab = tasksIn('abroad');
+    var preLeft = openIn('pre').length, abLeft = openIn('abroad').length;
+    var dueSoon = openIn('pre').filter(function (t) { return urgency(t) === 'overdue'; }).length;
+    var days = Math.max(0, Math.round((R.departureDate - new Date()) / 86400000));
+    var doneCount = S.tasks.length - preLeft - abLeft;
+    return [
+      { surf: 'Before I Leave', fin: 'Open items on the home list', val: String(preLeft),
+        cls: preLeft === 0 ? 'good' : 'key', sub: countLabel('pre') },
+      { surf: 'On The Road', fin: 'Open items for the trip', val: String(abLeft),
+        cls: abLeft === 0 ? 'good' : '', sub: countLabel('abroad') },
+      { surf: 'The Clock', fin: 'Days until you fly', val: String(days), cls: 'warn',
+        sub: 'Wheels up ' + monthLabel(R.departureDate) +
+          (dueSoon ? ' · ' + dueSoon + ' due this month' : ' · nothing due this month') },
+      { surf: 'Locked In', fin: 'Items in the done bucket', val: String(doneCount), cls: 'good',
+        sub: doneCount ? (tasksIn('pre').length - preLeft) + ' at home, ' + (tasksIn('abroad').length - abLeft) + ' on the road'
+          : 'Tick something off and it lands here' }
+    ].map(function (t) {
+      return '<div class="kpi ' + t.cls + '"><div class="surf">' + t.surf + '</div><div class="fin">' + t.fin + '</div>' +
+        '<div class="val num">' + t.val + '</div><div class="sub">' + esc(t.sub) + '</div></div>';
+    }).join('');
+  }
+
+  function catBarsHTML() {
+    var rows = CATS.map(function (c) {
+      var all = S.tasks.filter(function (t) { return t.cat === c.id; });
+      if (!all.length) return '';
+      var done = all.filter(function (t) { return t.done; }).length;
+      var p = done / all.length;
+      return '<div class="catbar"><span>' + esc(c.label) + '</span>' +
+        '<div class="bar mint"><i style="width:' + (p * 100).toFixed(1) + '%"></i></div>' +
+        '<span class="n">' + done + '/' + all.length + '</span></div>';
+    }).join('');
+    return '<div class="catbars">' + rows + '</div>';
+  }
+
+  function nextUpHTML() {
+    var open = openIn('pre').slice().sort(function (a, b) { return byRank(a) - byRank(b); }).slice(0, 6);
+    if (!open.length) return '<div class="empty">Nothing left before you leave. That is the whole point.</div>';
+    return '<div class="tasks">' + open.map(function (t) { return taskHTML(t); }).join('') + '</div>';
+  }
+
+  function intFilterHTML(list) {
+    var used = {}; tasksIn(list).forEach(function (t) { used[t.cat] = true; });
+    var h = '<button class="chip" data-intfilter="' + list + ':all" aria-pressed="' + (S.intFilter[list] === 'all') + '">All</button>';
+    CATS.forEach(function (c) {
+      if (!used[c.id]) return;
+      h += '<button class="chip" data-intfilter="' + list + ':' + c.id + '" aria-pressed="' + (S.intFilter[list] === c.id) + '">' + esc(c.label) + '</button>';
+    });
+    return h;
+  }
+
+  function listHTML(list) {
+    var f = S.intFilter[list];
+    var open = openIn(list).filter(function (t) { return f === 'all' || t.cat === f; })
+      .sort(function (a, b) { return byRank(a) - byRank(b); });
+    if (!open.length) {
+      return '<div class="empty">' + (f === 'all'
+        ? (list === 'pre' ? 'Home list is clear.' : 'Nothing on the road list yet — add something above.')
+        : 'Nothing open in that area.') + '</div>';
+    }
+    return open.map(function (t) { return taskHTML(t); }).join('');
+  }
+
+  function taskHTML(t) {
+    var u = urgency(t);
+    return '<div class="task ' + u + '" style="--tc:' + (u === 'overdue' ? 'var(--coral)' : u === 'soon' ? 'var(--amber)' : 'var(--surface-3)') + '">' +
+      '<input type="checkbox" class="box" data-toggletask="' + t.id + '" aria-label="Mark done: ' + esc(t.text) + '">' +
+      '<div class="body">' +
+      '<div class="t" contenteditable="true" data-edittask="' + t.id + '" role="textbox" aria-label="Edit item">' + esc(t.text) + '</div>' +
+      (t.note ? '<div class="why">' + esc(t.note) + '</div>' : '') +
+      '<div class="meta"><span class="tag place">' + esc(CATNAME[t.cat] || t.cat) + '</span>' +
+      '<span class="when-tag ' + u + '">' + esc(byLabel(t)) + '</span></div>' +
+      '</div><button class="kill" data-killtask="' + t.id + '" aria-label="Delete item">✕</button></div>';
+  }
+
+  function doneHTML() {
+    var done = S.tasks.filter(function (t) { return t.done; })
+      .sort(function (a, b) { return (b.doneAt || 0) - (a.doneAt || 0); });
+    if (!done.length) return '<div class="empty">Nothing locked in yet. Tick something off and it lands here.</div>';
+    var pre = done.filter(function (t) { return t.list === 'pre'; }).length;
+    return '<p class="hint" style="margin-bottom:12px">' + done.length + ' done — ' + pre + ' before departure, ' +
+      (done.length - pre) + ' on the road. Click the tick to put one back.</p>' +
+      '<div class="donebucket">' + done.map(function (t) {
+        return '<div class="doneline"><button class="kill tick" data-toggletask="' + t.id + '" aria-label="Move back to the list">✓</button>' +
+          '<span class="t">' + esc(t.text) + '</span>' +
+          '<span class="tag place">' + esc(CATNAME[t.cat] || t.cat) + '</span>' +
+          '<span class="when">' + (t.doneAt ? new Date(t.doneAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '') + '</span></div>';
+      }).join('') + '</div>';
+  }
+
+  function fillAddForm() {
+    var ls = document.getElementById('add-list'), cs = document.getElementById('add-cat'), bs = document.getElementById('add-by');
+    var keepList = ls.value || 'pre', keepCat = cs.value, keepBy = bs.value;
+    ls.innerHTML = '<option value="pre">Before I leave</option><option value="abroad">On the road</option>';
+    ls.value = keepList;
+    cs.innerHTML = CATS.map(function (c) { return '<option value="' + c.id + '">' + esc(c.label) + '</option>'; }).join('');
+    if (keepCat) cs.value = keepCat;
+    var opts = byOptions(keepList);
+    bs.innerHTML = opts.map(function (o) { return '<option value="' + o.v + '">' + esc(o.label) + '</option>'; }).join('');
+    if (opts.some(function (o) { return o.v === keepBy; })) bs.value = keepBy;
+  }
+
+  function findTask(id) { for (var i = 0; i < S.tasks.length; i++) if (S.tasks[i].id === id) return S.tasks[i]; return null; }
+
+  /* ======================================================================
      EVENTS
      ====================================================================== */
+
+  document.addEventListener('submit', function (e) {
+    if (e.target.id !== 'addform') return;
+    e.preventDefault();
+    var txt = document.getElementById('add-text').value.trim();
+    if (!txt) return;
+    S.tasks.unshift({
+      id: 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      list: document.getElementById('add-list').value,
+      cat: document.getElementById('add-cat').value,
+      by: document.getElementById('add-by').value,
+      text: txt, note: '', done: false, doneAt: null
+    });
+    document.getElementById('add-text').value = '';
+    renderIntegrity(); save();
+    document.getElementById('add-text').focus();
+  });
+
+  document.addEventListener('blur', function (e) {
+    var id = e.target && e.target.dataset && e.target.dataset.edittask;
+    if (!id) return;
+    var t = findTask(id);
+    if (!t) return;
+    var v = e.target.textContent.trim();
+    if (!v) { e.target.textContent = t.text; return; }
+    if (v !== t.text) { t.text = v; save(); }
+  }, true);
 
   document.addEventListener('input', function (e) {
     var t = e.target;
@@ -939,6 +1145,7 @@
 
   document.addEventListener('change', function (e) {
     var t = e.target, g;
+    if (t.id === 'add-list') { fillAddForm(); return; }
     if (t.dataset.toggle) { S[t.dataset.toggle] = t.checked; return renderAll(); }
     ['fixed', 'start', 'pre', 'region', 'onetime', 'reserve'].forEach(function (grp) {
       if (t.dataset[grp] !== undefined) { g = true; S[grp][t.dataset[grp]] = parseFloat(t.value) || 0; }
@@ -948,18 +1155,38 @@
   });
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-month],[data-region],[data-add],[data-legup],[data-legdown],[data-legdel],[data-leginc],[data-legdec],[data-spot],[data-reset]');
+    var t = e.target.closest('[data-tab],[data-month],[data-region],[data-add],[data-legup],[data-legdown],' +
+      '[data-legdel],[data-leginc],[data-legdec],[data-spot],[data-reset],[data-toggletask],[data-killtask],[data-intfilter]');
     if (!t) return;
     var d = t.dataset;
     if (d.tab) { S.tab = d.tab; return renderAll(); }
     if (d.reset !== undefined) {
-      if (!confirm('Reset every number and the whole course back to the CSV defaults?')) return;
+      if (!confirm('Reset every number and the whole course back to the CSV defaults? Your Integrity list is kept.')) return;
+      var keepTab = S.tab, keepTasks = S.tasks, keepFilter = S.intFilter;
       try { localStorage.removeItem(STORE); } catch (err) {}
-      var keep = S.tab;
       S = SF.clone(SF.DEFAULTS);
       S.route = SFSPOTS.DEFAULT_ROUTE.map(function (l, i) { return mkLeg(l.spot, l.months, i); });
-      S.tab = keep; S.monthFilter = 0; S.regionFilter = 'all'; S.assign = {};
+      S.tab = keepTab; S.monthFilter = 0; S.regionFilter = 'all'; S.assign = {};
+      S.tasks = keepTasks; S.intFilter = keepFilter;
       syncMonths(); return renderAll();
+    }
+    if (d.toggletask) {
+      var tk = findTask(d.toggletask);
+      if (tk) { tk.done = !tk.done; tk.doneAt = tk.done ? Date.now() : null; }
+      renderIntegrity(); save(); return;
+    }
+    if (d.killtask) {
+      var victim = findTask(d.killtask);
+      if (victim && confirm('Delete "' + victim.text.slice(0, 70) + '"?')) {
+        S.tasks = S.tasks.filter(function (x) { return x.id !== d.killtask; });
+        renderIntegrity(); save();
+      }
+      return;
+    }
+    if (d.intfilter) {
+      var parts = d.intfilter.split(':');
+      S.intFilter[parts[0]] = parts[1];
+      renderIntegrity(); save(); return;
     }
     if (d.month !== undefined) { S.monthFilter = +d.month; return renderAll(); }
     if (d.region) { S.regionFilter = d.region; return renderAll(); }

@@ -9,6 +9,7 @@
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button role="tab" data-tab="treasure" aria-selected="true" aria-controls="treasure">Treasure</button>
     <button role="tab" data-tab="adventure" aria-selected="false" aria-controls="adventure">Adventure</button>
+    <button role="tab" data-tab="integrity" aria-selected="false" aria-controls="integrity">Integrity</button>
   </nav>
   <span class="verdict no" id="verdict"><span class="dot"></span>Loading</span>
   <button class="ghost" data-reset>Reset to CSV</button>
@@ -119,9 +120,58 @@
 
   </section>
 
+
+  <!-- ================= INTEGRITY ================= -->
+  <section id="integrity" class="stack" role="tabpanel" aria-label="Integrity — the checklist" hidden>
+
+    <div class="split hero">
+      <div class="stack">
+        <div class="kpis" id="int-kpis"></div>
+        <div class="card">
+          <div class="card-h">Next up<span class="rule"></span><em>Soonest first</em></div>
+          <div id="int-next"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h">Add something<span class="rule"></span><em>Enter to save</em></div>
+        <form id="addform" autocomplete="off">
+          <input type="text" id="add-text" placeholder="What needs to happen?" aria-label="What needs to happen?" style="margin-bottom:10px">
+          <div class="addrow">
+            <select id="add-list" aria-label="Which list"></select>
+            <select id="add-cat" aria-label="Category"></select>
+            <select id="add-by" aria-label="By when"></select>
+            <button type="submit" class="add">Add</button>
+          </div>
+        </form>
+        <div class="card-h" style="margin-top:20px">Progress by area<span class="rule"></span></div>
+        <div id="int-cats"></div>
+      </div>
+    </div>
+
+    <div class="split-even">
+      <div class="card">
+        <div class="card-h">Before I leave<span class="rule"></span><em id="pre-count"></em></div>
+        <div class="chipbar" id="int-filter-pre" style="margin-bottom:12px"></div>
+        <div class="tasks" id="int-pre"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">On the road<span class="rule"></span><em id="ab-count"></em></div>
+        <div class="chipbar" id="int-filter-ab" style="margin-bottom:12px"></div>
+        <div class="tasks" id="int-abroad"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Locked in<span class="rule"></span><em>Done and out of the way</em></div>
+      <div id="int-done"></div>
+    </div>
+
+  </section>
+
   <p class="foot-note" style="margin-top:26px">Built from your planning CSV. Placeholder lines are marked in the audit trail; three recurring lines the CSV missed are marked <span class="tag added">Added</span>. Nothing is saved anywhere but this browser — your figures never leave the page.</p>
 </main>
 
 <script>/*__MODEL__*/</script>
 <script>/*__SPOTS__*/</script>
+<script>/*__TASKS__*/</script>
 <script>/*__APP__*/</script>
