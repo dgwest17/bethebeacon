@@ -4,7 +4,7 @@
   "private": true,
   "description": "Surf-expedition financial model and route planner.",
   "scripts": {
-    "build": "node build.js",
+    "bundle": "node build.js",
     "test": "node test/check.js",
     "start": "node build.js && npx --yes serve ."
   }

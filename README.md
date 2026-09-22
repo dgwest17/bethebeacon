@@ -3,7 +3,7 @@
 A surf-expedition planning dashboard: how much cash it takes to leave, how long
 it lasts, and where the course actually goes.
 
-Two tabs:
+Three tabs:
 
 - **Treasure** — the financial model. Required departure cash (the paddle-out
   number), the funding gap, the gross income needed before departure, monthly
@@ -11,13 +11,19 @@ Two tabs:
   cash trajectory, ranked overhead audit, remote-income ladder, break-even, and
   five scenarios side by side. Every input is editable and every formula is
   printed in the audit trail.
+- **Integrity** — the checklist. Two lists, *before I leave* and *on the road*,
+  seeded with the work the financial model already assumes you'll do. Add items
+  in one line, tag them by area, hang them off a calendar month or a leg of the
+  course, and tick them into the **Locked in** bucket when they're done. The
+  summary shows what's open, what's due this month, and progress by area.
 - **Adventure** — the route. A Pacific-centred surf chart with 29 breaks
   (season, monthly cost, visa rules, board-bag logistics, hazards), a course
   builder you can reorder and restretch, flight legs between stops, and work
   blocks showing what each leg can support — wifi and San Diego overlap.
 
-The two are wired together: changing the course rewrites the region months, the
-trip length and the travel burn in the model.
+Adventure feeds the model — changing the course rewrites the region months, the
+trip length and the travel burn — and Integrity hangs its items off the same
+calendar and the same legs.
 
 ## Run it
 
@@ -29,8 +35,11 @@ npx serve .
 
 ## Deploy
 
-**Vercel** — import the repo; it's detected as a static site and `index.html` is
-served from the root. No build step, no environment variables.
+**Vercel** — import the repo. `vercel.json` pins it as a static deploy of the
+repo root (`outputDirectory: "."`, no build command), so `index.html` is served
+directly. No build step, no environment variables. If you ever see *No Output
+Directory named "public"*, it means Vercel picked up a build script — that's
+what this config prevents.
 
 ```bash
 npx vercel --prod
@@ -52,6 +61,7 @@ node test/check.js # 30+ assertions on the model's identities
 |---|---|
 | `src/model.js` | Every figure from the planning CSV, plus the math. Runs in node and the browser. |
 | `src/spots.js` | The 29 breaks, their seasons and costs, and the default course. |
+| `src/tasks.js` | The seeded Integrity checklist and its categories. |
 | `src/app.js` | Rendering, charts and interaction. |
 | `src/styles.css` | Tokens and layout. |
 | `src/page.html` | Page skeleton with inline slots. |

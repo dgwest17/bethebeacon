@@ -9,6 +9,7 @@ const fragment = read('src/page.html')
   .replace('/*__CSS__*/', () => read('src/styles.css'))
   .replace('/*__MODEL__*/', () => read('src/model.js'))
   .replace('/*__SPOTS__*/', () => read('src/spots.js'))
+  .replace('/*__TASKS__*/', () => read('src/tasks.js'))
   .replace('/*__APP__*/', () => read('src/app.js'));
 
 const head = fragment.slice(0, fragment.indexOf('<header'));
