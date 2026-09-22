@@ -1,0 +1,2231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Surf-expedition financial model and route planner: departure cash, monthly burn, runway, and a world course you can rearrange.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23050C15'/%3E%3Cpath d='M4 21c4 0 4-5 8-5s4 5 8 5 4-5 8-5' stroke='%23D9A441' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3Cpath d='M4 26c4 0 4-4 8-4s4 4 8 4 4-4 8-4' stroke='%236FE0A6' stroke-width='1.6' fill='none' stroke-linecap='round' opacity='.65'/%3E%3C/svg%3E">
+<title>Swell Fund</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;500;700&display=swap">
+<style>/* ==========================================================================
+   SWELL FUND — night-ocean chart room.
+   One committed theme: deep water, brass instruments, phosphor-green money.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  --ink:        #050C15;
+  --ink-2:      #071322;
+  --surface:    #0B1826;
+  --surface-2:  #102438;
+  --surface-3:  #16304A;
+  --line:       #1B3149;
+  --line-soft:  #142438;
+
+  --gold:       #D9A441;
+  --gold-hi:    #EFC46B;
+  --gold-dim:   rgba(217, 164, 65, 0.22);
+
+  --mint:       #6FE0A6;
+  --coral:      #EF6F61;
+  --amber:      #E8B04B;
+  --sea:        #58C6DE;
+
+  --text:       #E9F0F6;
+  --muted:      #93A9BD;
+  --dim:        #5F7891;
+
+  /* validated categorical series — regions */
+  --csa:        #BF8430;
+  --aus:        #18A276;
+  --sea-reg:    #4487DE;
+
+  --r-sm: 6px;
+  --r:    10px;
+  --r-lg: 16px;
+
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --serif: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --body: "Karla", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 700px at 78% -12%, rgba(88, 198, 222, 0.07), transparent 60%),
+    radial-gradient(900px 520px at 8% 4%, rgba(217, 164, 65, 0.05), transparent 62%),
+    var(--ink);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: 600; text-wrap: balance; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+a { color: var(--sea); }
+
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+/* ---- shell --------------------------------------------------------------- */
+
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding: 12px 20px;
+  background: rgba(5, 12, 21, 0.92);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand b {
+  font-family: var(--serif); font-size: 25px; font-weight: 600;
+  letter-spacing: 0.10em; color: var(--gold-hi); text-transform: uppercase;
+}
+.brand span { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; color: var(--dim); text-transform: uppercase; }
+
+.tabs { display: flex; gap: 4px; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
+.tabs button {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 8px 18px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--gold-dim); color: var(--gold-hi); box-shadow: inset 0 0 0 1px rgba(217,164,65,.45); }
+.tabs button:hover:not([aria-selected="true"]) { color: var(--text); }
+
+.verdict {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  padding: 7px 14px; border-radius: 999px; border: 1px solid currentColor;
+}
+.verdict .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.verdict.go { color: var(--mint); } .verdict.close { color: var(--amber); } .verdict.no { color: var(--coral); }
+
+.ghost {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line);
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.ghost:hover { border-color: var(--gold); color: var(--gold-hi); }
+
+.wrap { max-width: 1480px; margin: 0 auto; padding-inline: 20px; padding-block: 22px 72px; }
+.grid { display: grid; gap: 16px; }
+.g-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.split { display: grid; gap: 16px; grid-template-columns: minmax(0, 2.15fr) minmax(0, 1fr); align-items: stretch; }
+.split-even { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+.stack { display: grid; gap: 16px; }
+.split.hero { align-items: start; }
+
+/* ---- cards --------------------------------------------------------------- */
+
+.card {
+  background: linear-gradient(180deg, var(--surface) 0%, var(--ink-2) 100%);
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  padding: 18px 20px;
+}
+.card.flat { background: var(--ink-2); }
+.card-h {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 14px;
+}
+.card-h .rule { flex: 1; height: 1px; background: var(--line); }
+.card-h em { font-style: normal; color: var(--dim); letter-spacing: 0.1em; }
+
+.hint { font-size: 12px; color: var(--dim); line-height: 1.55; }
+.hint strong { color: var(--muted); font-weight: 600; }
+
+/* ---- KPI tiles ----------------------------------------------------------- */
+
+.kpis { display: grid; gap: 1px; background: var(--line-soft); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
+        grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.kpi { background: var(--surface); padding: 15px 16px 14px; display: flex; flex-direction: column; gap: 2px; min-height: 104px; }
+.kpi .surf { font-family: var(--serif); font-size: 17px; letter-spacing: 0.05em; color: var(--gold-hi); text-transform: uppercase; }
+.kpi .fin { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); }
+.kpi .val { font-family: var(--mono); font-size: 25px; font-weight: 500; margin-top: auto; letter-spacing: -0.02em; }
+.kpi .sub { font-size: 11px; color: var(--muted); }
+.kpi.good .val { color: var(--mint); } .kpi.bad .val { color: var(--coral); } .kpi.warn .val { color: var(--amber); }
+.kpi.key { background: linear-gradient(180deg, rgba(217,164,65,.10), rgba(217,164,65,.02)); }
+.kpi.key .val { color: var(--gold-hi); }
+
+/* ---- gauge --------------------------------------------------------------- */
+
+.gauge-card { display: flex; flex-direction: column; gap: 12px; }
+.gauge-wrap { position: relative; display: grid; place-items: center; }
+.gauge-wrap svg { max-width: 252px; }
+.gauge-read { position: absolute; bottom: 6px; text-align: center; }
+.gauge-read .pct { font-family: var(--mono); font-size: 34px; letter-spacing: -0.03em; }
+.gauge-read .cap { font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+
+/* ---- controls ------------------------------------------------------------ */
+
+.levers { display: grid; gap: 14px 22px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lever { display: grid; gap: 5px; }
+.lever > label {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted);
+}
+.lever > label b { font-family: var(--mono); font-size: 13px; letter-spacing: 0; color: var(--gold-hi); font-weight: 500; }
+.lever .note { font-size: 10.5px; color: var(--dim); }
+
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--surface-3); }
+input[type="range"]::-moz-range-track { height: 3px; border-radius: 2px; background: var(--surface-3); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 15px; height: 15px; margin-top: -6px; border-radius: 50%;
+  background: var(--gold); border: 2px solid var(--ink); box-shadow: 0 0 0 1px var(--gold);
+}
+input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: var(--gold); border: 2px solid var(--ink); }
+input[type="range"]:focus-visible { outline: 2px solid var(--sea); outline-offset: 3px; border-radius: 4px; }
+
+input[type="number"], input[type="text"], select {
+  width: 100%; padding: 7px 9px; background: var(--ink); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums;
+}
+input[type="number"]:focus, select:focus, input[type="text"]:focus { outline: none; border-color: var(--gold); }
+select { cursor: pointer; }
+
+.switch { display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 12px; color: var(--muted); }
+.switch input { appearance: none; -webkit-appearance: none; width: 34px; height: 19px; border-radius: 999px;
+  background: var(--surface-3); border: 1px solid var(--line); position: relative; cursor: pointer; flex: none; margin: 0; }
+.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%;
+  background: var(--dim); transition: transform .16s ease, background .16s ease; }
+.switch input:checked { background: var(--gold-dim); border-color: var(--gold); }
+.switch input:checked::after { transform: translateX(15px); background: var(--gold-hi); }
+.switch input:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; }
+
+.chipbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--ink);
+  color: var(--muted); cursor: pointer;
+}
+.chip:hover { border-color: var(--gold); color: var(--gold-hi); }
+.chip[aria-pressed="true"] { background: var(--gold-dim); border-color: var(--gold); color: var(--gold-hi); }
+
+/* ---- ladder (mirrors the break-run panel) -------------------------------- */
+
+.ladder { display: grid; gap: 1px; }
+.ladder .row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: baseline;
+  padding: 9px 12px; border-radius: var(--r-sm);
+}
+.ladder .row + .row { border-top: 1px dotted var(--line); }
+.ladder .name { font-family: var(--serif); font-size: 17px; color: var(--text); }
+.ladder .rng { font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 0.06em; }
+.ladder .amt { font-family: var(--mono); font-size: 13px; color: var(--muted); min-width: 92px; text-align: right; }
+.ladder .row.on { background: rgba(217,164,65,.09); box-shadow: inset 0 0 0 1px rgba(217,164,65,.45); }
+.ladder .row.on .name, .ladder .row.on .amt { color: var(--gold-hi); }
+
+/* ---- key/value rows ------------------------------------------------------ */
+
+.kv { display: grid; gap: 0; }
+.kv .r { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dotted var(--line); }
+.kv .r:last-child { border-bottom: 0; }
+.kv .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.kv .fill { flex: 1; }
+.kv .v { font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.kv .r.total { border-top: 1px solid var(--line); border-bottom: 0; margin-top: 4px; padding-top: 10px; }
+.kv .r.total .k { color: var(--gold-hi); } .kv .r.total .v { font-size: 16px; color: var(--gold-hi); }
+.pos { color: var(--mint); } .neg { color: var(--coral); } .flat-c { color: var(--muted); }
+
+/* ---- tables -------------------------------------------------------------- */
+
+.tbl-scroll { overflow-x: auto; margin-inline: -4px; padding-inline: 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--dim); text-align: right; font-weight: 400; padding: 0 10px 8px; white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+th:first-child, td:first-child { text-align: left; padding-left: 0; }
+th:last-child, td:last-child { padding-right: 0; }
+td { padding: 9px 10px; text-align: right; border-bottom: 1px dotted var(--line-soft); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+tr.hi td { background: rgba(217,164,65,.06); }
+td .lab { display: flex; align-items: center; gap: 9px; }
+.swatch { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+
+.tag {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 3px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap;
+}
+.tag.added { color: var(--sea); border-color: rgba(88,198,222,.4); }
+.tag.need { color: var(--coral); border-color: rgba(239,111,97,.45); }
+.tag.place { color: var(--muted); }
+
+/* ---- bars ---------------------------------------------------------------- */
+
+.bar { height: 7px; border-radius: 3px; background: var(--surface-3); overflow: hidden; min-width: 60px; }
+.bar > i { display: block; height: 100%; border-radius: 3px; background: var(--gold); }
+.bar.mint > i { background: var(--mint); }
+
+/* ---- flags --------------------------------------------------------------- */
+
+.flags { display: grid; gap: 7px; }
+.flag { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; padding: 9px 12px; border-radius: var(--r-sm);
+        border-left: 2px solid; background: var(--ink); line-height: 1.45; }
+.flag.error { border-color: var(--coral); color: #F6B3AB; }
+.flag.warn  { border-color: var(--amber); color: #F0D49A; }
+.flag.info  { border-color: var(--sea); color: #A9DCE9; }
+.flag b { font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; flex: none; padding-top: 2px; }
+
+/* ---- charts -------------------------------------------------------------- */
+
+.chart { width: 100%; display: block; overflow: visible; }
+.chart text { font-family: var(--mono); font-size: 9px; letter-spacing: 0.06em; }
+.tipbox {
+  position: absolute; pointer-events: none; z-index: 20; min-width: 168px;
+  background: rgba(7,19,34,.97); border: 1px solid var(--gold); border-radius: var(--r-sm);
+  padding: 9px 11px; font-size: 11.5px; line-height: 1.5; box-shadow: 0 10px 30px rgba(0,0,0,.6);
+}
+.tipbox .t { font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold-hi); margin-bottom: 4px; }
+.tipbox .l { display: flex; justify-content: space-between; gap: 14px; }
+.tipbox .l span:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.chart-holder { position: relative; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--mono); font-size: 9.5px;
+          letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.legend .line-key { display: inline-block; width: 14px; height: 2px; margin-right: 6px; vertical-align: 4px; }
+
+/* ---- ocean chart --------------------------------------------------------- */
+
+.ocean {
+  position: relative; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line);
+  background: linear-gradient(180deg, #0A2438 0%, #0E3B55 34%, #11566F 62%, #0C2E45 100%);
+}
+.ocean svg { display: block; width: 100%; height: auto; }
+.spot-dot { cursor: pointer; }
+.spot-dot circle.hit { fill: transparent; }
+.spot-dot:hover circle.core, .spot-dot.sel circle.core { stroke: #FFF6E2; stroke-width: 2; }
+
+/* ---- route --------------------------------------------------------------- */
+
+.legs { display: grid; gap: 10px; }
+.leg {
+  display: grid; gap: 12px; align-items: center; padding: 12px 14px;
+  grid-template-columns: 30px minmax(0, 1.5fr) auto auto auto auto;
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: var(--r);
+  border-left: 3px solid var(--rc, var(--line));
+}
+.leg .idx { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.leg .who { display: grid; gap: 2px; min-width: 0; }
+.leg .who b { font-family: var(--serif); font-size: 19px; font-weight: 600; letter-spacing: 0.02em; }
+.leg .who span { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.leg .when { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.leg .cost { font-family: var(--mono); font-size: 13px; color: var(--mint); white-space: nowrap; }
+.leg .mo { display: flex; align-items: center; gap: 4px; }
+.leg .mo button { width: 24px; height: 24px; border-radius: var(--r-sm); border: 1px solid var(--line);
+  background: var(--surface); color: var(--muted); cursor: pointer; line-height: 1; font-size: 14px; }
+.leg .mo button:hover { border-color: var(--gold); color: var(--gold-hi); }
+.leg .mo b { font-family: var(--mono); font-size: 13px; width: 30px; text-align: center; }
+.leg .acts { display: flex; gap: 5px; }
+.fit { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+       padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.fit.on  { color: var(--mint); background: rgba(111,224,166,.12); }
+.fit.mid { color: var(--amber); background: rgba(232,176,75,.12); }
+.fit.off { color: var(--coral); background: rgba(239,111,97,.12); }
+
+.season-strip { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
+.season-strip i { height: 5px; border-radius: 1px; background: var(--surface-3); }
+.season-strip i.on { background: var(--mint); }
+.season-strip i.now { box-shadow: 0 0 0 1px var(--gold-hi); }
+
+/* ---- spot cards ---------------------------------------------------------- */
+
+.spots { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+.spot {
+  display: grid; gap: 9px; padding: 15px 16px; border-radius: var(--r);
+  background: var(--ink-2); border: 1px solid var(--line); border-left: 3px solid var(--rc);
+}
+.spot h4 { font-family: var(--serif); font-size: 21px; letter-spacing: 0.01em; }
+.spot .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.spot .desc { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+.spot .facts { display: grid; gap: 5px; font-size: 11.5px; color: var(--dim); line-height: 1.5; }
+.spot .facts b { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.spot .watch { font-size: 11.5px; color: #F0D49A; line-height: 1.5; }
+.spot .foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 2px; }
+.spot .price { font-family: var(--mono); font-size: 16px; color: var(--mint); }
+.spot .price small { font-size: 10px; color: var(--dim); }
+.add {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 7px 14px; border-radius: 999px; border: 1px solid var(--gold); background: var(--gold-dim);
+  color: var(--gold-hi); cursor: pointer;
+}
+.add:hover { background: var(--gold); color: #1A1204; }
+
+.dots { display: inline-flex; gap: 3px; vertical-align: -1px; }
+.dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--surface-3); display: block; }
+.dots i.on { background: var(--sea); }
+
+/* ---- work blocks --------------------------------------------------------- */
+
+.work { display: grid; gap: 10px; }
+.work-row {
+  display: grid; gap: 12px; align-items: center; padding: 11px 14px;
+  grid-template-columns: minmax(0, 1.2fr) auto auto minmax(0, 1.1fr);
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: var(--r); border-left: 3px solid var(--rc);
+}
+.work-row .p { font-family: var(--serif); font-size: 17px; }
+.work-row .s { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+
+details { border: 1px solid var(--line); border-radius: var(--r); background: var(--ink-2); }
+details + details { margin-top: 10px; }
+summary {
+  cursor: pointer; padding: 13px 16px; list-style: none;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  display: flex; align-items: center; gap: 10px;
+}
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "+"; color: var(--gold); font-size: 14px; line-height: 1; }
+details[open] summary::before { content: "–"; }
+details[open] summary { border-bottom: 1px solid var(--line); color: var(--gold-hi); }
+.details-body { padding: 16px; }
+
+.formula { font-family: var(--mono); font-size: 11.5px; line-height: 1.9; color: var(--muted); }
+.formula b { color: var(--gold-hi); font-weight: 500; }
+.formula .op { color: var(--dim); }
+
+.foot-note { font-size: 11.5px; color: var(--dim); line-height: 1.6; }
+
+/* ---- responsive ---------------------------------------------------------- */
+
+@media (max-width: 1180px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .split, .split-even, .g-3, .g-2 { grid-template-columns: minmax(0, 1fr); }
+  .levers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .wrap { padding-inline: 16px; }
+  .topbar { padding: 10px 16px; gap: 10px; }
+  .brand b { font-size: 20px; }
+  .levers { grid-template-columns: minmax(0, 1fr); }
+  .kpis { grid-template-columns: minmax(0, 1fr); }
+  .leg { grid-template-columns: 24px minmax(0, 1fr); row-gap: 8px; }
+  .leg .when, .leg .cost, .leg .mo, .leg .acts { grid-column: 2; }
+  .work-row { grid-template-columns: minmax(0, 1fr); }
+  .spots { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; border-radius: 3px; }
+</style>
+<style>
+  html, body { min-height: 100%; }
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><b>Swell&nbsp;Fund</b><span>Runway &amp; route · 2026–2029</span></div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="treasure" aria-selected="true" aria-controls="treasure">Treasure</button>
+    <button role="tab" data-tab="adventure" aria-selected="false" aria-controls="adventure">Adventure</button>
+  </nav>
+  <span class="verdict no" id="verdict"><span class="dot"></span>Loading</span>
+  <button class="ghost" data-reset>Reset to CSV</button>
+</header>
+
+<main class="wrap">
+
+  <!-- ================= TREASURE ================= -->
+  <section id="treasure" class="stack" role="tabpanel" aria-label="Treasure — the financial model">
+
+    <div class="split hero">
+      <div class="kpis" id="kpis"></div>
+      <div class="card gauge-card">
+        <div class="card-h">Can I leave?<span class="rule"></span><em>Catch the swell</em></div>
+        <div id="gauge"></div>
+      </div>
+    </div>
+
+    <div class="flags" id="flags"></div>
+
+    <div class="card">
+      <div class="card-h">The controls<span class="rule"></span><em>Every assumption is a dial</em></div>
+      <div id="levers"></div>
+    </div>
+
+    <div class="split">
+      <div class="card">
+        <div class="card-h">Cash trajectory<span class="rule"></span><em>Today → home again</em></div>
+        <div id="traj"></div>
+      </div>
+      <div class="card" id="glance"></div>
+    </div>
+
+    <div class="split-even">
+      <div class="card">
+        <div class="card-h">World surf plan<span class="rule"></span><em>Where the money goes</em></div>
+        <div id="plan"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">What actually closes the gap<span class="rule"></span><em>Levers, ranked</em></div>
+        <div id="levrank"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Home-break overhead audit<span class="rule"></span><em>US and business costs that follow you</em></div>
+      <div id="audit"></div>
+    </div>
+
+    <div class="g-3 grid">
+      <div class="card">
+        <div class="card-h">The swell ladder<span class="rule"></span><em>Remote income</em></div>
+        <div id="ladder"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">Break-even remote income<span class="rule"></span></div>
+        <div id="breakeven"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">One more month?<span class="rule"></span></div>
+        <div id="onemore"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Scenarios<span class="rule"></span><em>Side by side</em></div>
+      <div id="scen"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Assumptions &amp; audit trail<span class="rule"></span><em>Every input, every formula</em></div>
+      <div id="inputs"></div>
+    </div>
+
+  </section>
+
+  <!-- ================= ADVENTURE ================= -->
+  <section id="adventure" class="stack" role="tabpanel" aria-label="Adventure — the route" hidden>
+
+    <div class="card">
+      <div class="card-h">The chart<span class="rule"></span><em>Tap a break to add it to the course</em></div>
+      <div class="chipbar" id="monthchips" style="margin-bottom:12px"></div>
+      <div id="ocean"></div>
+      <p class="hint" style="margin-top:12px">Pacific-centred, so the whole surf belt reads left to right: Asia and the Indian Ocean, then Oceania, then the Americas. Filled dots are on your course; the dotted line is the course itself, starting from the home break.</p>
+    </div>
+
+    <div class="card" id="course-card">
+      <div class="card-h">The course<span class="rule"></span><em>Reorder, restretch, remove</em></div>
+      <div id="coursefoot"></div>
+      <div class="legs" id="course"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Logistics between legs<span class="rule"></span><em>Hops, distances, board bags</em></div>
+      <div id="logistics"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Work blocks<span class="rule"></span><em>What each leg can actually support</em></div>
+      <div id="workblocks"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">The break library<span class="rule"></span><em>Seasons, costs, visas, hazards</em></div>
+      <div class="chipbar" id="regionchips" style="margin-bottom:14px"></div>
+      <div class="spots" id="library"></div>
+    </div>
+
+  </section>
+
+  <p class="foot-note" style="margin-top:26px">Built from your planning CSV. Placeholder lines are marked in the audit trail; three recurring lines the CSV missed are marked <span class="tag added">Added</span>. Nothing is saved anywhere but this browser — your figures never leave the page.</p>
+</main>
+
+<script>/* ==========================================================================
+   SWELL FUND — financial model
+   Every number here traces to the source CSV unless marked ADDED.
+   Runs unchanged in the browser (global SF) and in node (module.exports).
+   ========================================================================== */
+(function (root) {
+  'use strict';
+
+  var TODAY = new Date(2026, 8, 1); // Sept 2026, the model's month 0
+
+  /* ---- Source data ------------------------------------------------------ */
+
+  // Starting position (CSV: Starting Position)
+  var START = [
+    { id: 'checking', label: 'Checking', amount: 12000, conf: 'Known', spend: true, note: 'Liquid now.' },
+    { id: 'savings', label: 'Savings', amount: 24000, conf: 'Known', spend: true, note: 'Liquid now.' },
+    { id: 'pipeline', label: 'Solar pipeline', amount: 15000, conf: 'Estimate', spend: 'pipeline', note: 'Commissions already in pipeline. Probability-adjusted by the collection lever.' },
+    { id: 'stocks', label: 'Stocks / 401(k)', amount: 60000, conf: 'Known', spend: false, note: 'BACKSTOP. Never counted as travel cash unless you flip the liquidation toggle.' },
+    { id: 'condoEquity', label: 'Condo equity', amount: 60000, conf: 'Estimate', spend: false, note: 'BACKSTOP. Never counted unless you flip the equity-release toggle.' }
+  ];
+
+  // Pre-departure one-time cash events (CSV: Pre-Departure)
+  var PRE = [
+    { id: 'bizCard', label: 'Business credit card payoff', amount: 20000, conf: 'Known', kind: 'debt', note: '0% promo ends February 2027. Model pays it in the expiry month.' },
+    { id: 'taxes2026', label: '2026 tax bill remaining', amount: 10000, conf: 'Estimate', kind: 'tax', note: 'Fixed known bill. New income is taxed separately by the reserve %.' },
+    { id: 'europe', label: 'Europe trip (November)', amount: 3000, conf: 'Estimate', kind: 'travel', note: '2–3 weeks. Replace with the real budget.' },
+    { id: 'loanPayoff', label: 'Student loan payoff (optional)', amount: 18000, conf: 'Known', kind: 'optional', note: 'Balance, not an expense. Only spent if you switch payoff on.' }
+  ];
+
+  // Recurring burn that follows you abroad (CSV: Abroad Fixed Burn, + ADDED)
+  var FIXED = [
+    { id: 'condoShortfall', label: 'Condo cash-flow shortfall', group: 'Condo', amount: 200, conf: 'Estimate', note: 'Negative monthly cash flow once rented. Confirm it excludes management.' },
+    { id: 'propMgmt', label: 'Property management', group: 'Condo', amount: 200, conf: 'Placeholder', note: 'Replace with a real quote — usually 8–10% of rent.' },
+    { id: 'condoReserve', label: 'Repair + vacancy reserve', group: 'Condo', amount: 200, conf: 'Planning', note: 'Turnover, HOA surprises, one vacant month a year.' },
+    { id: 'storage', label: 'Storage unit', group: 'US carry', amount: 175, conf: 'Placeholder', note: 'Prime cut candidate — sell or donate instead.' },
+    { id: 'vehicle', label: 'Vehicle storage / insurance / rego', group: 'US carry', amount: 75, conf: 'Placeholder', note: 'Set to $0 if the vehicle is sold.' },
+    { id: 'usPhone', label: 'US phone number', group: 'US carry', amount: 40, conf: 'Placeholder', note: 'Needed for banking 2FA. A cheap VoIP line does it for ~$5.' },
+    { id: 'intlSim', label: 'International eSIM / data', group: 'On the road', amount: 35, conf: 'Placeholder', note: 'Local SIMs are cheaper than roaming eSIMs in Indo and Sri Lanka.' },
+    { id: 'insurance', label: 'Travel + medical insurance', group: 'On the road', amount: 200, conf: 'Placeholder', note: 'CONFIRM the policy covers surfing and motorbikes. Most exclude both.' },
+    { id: 'studentLoanPmt', label: 'Student loan payment', group: 'Debt', amount: 0, conf: 'INPUT NEEDED', note: 'Enter the actual payment under your chosen plan (IDR / deferment / standard).' },
+    { id: 'crm', label: 'CRM / Zoho', group: 'Business', amount: 35, conf: 'Placeholder', note: '' },
+    { id: 'books', label: 'QuickBooks / bookkeeping', group: 'Business', amount: 75, conf: 'Placeholder', note: '' },
+    { id: 'web', label: 'Website / domains / hosting', group: 'Business', amount: 35, conf: 'Placeholder', note: '' },
+    { id: 'appHosting', label: 'App hosting / database / APIs', group: 'App', amount: 125, conf: 'Placeholder', note: 'Should scale with users and revenue, not sit flat.' },
+    { id: 'workspace', label: 'Email / Workspace / cloud', group: 'Business', amount: 30, conf: 'Placeholder', note: '' },
+    { id: 'software', label: 'Other software subscriptions', group: 'Business', amount: 100, conf: 'Placeholder', note: 'Audit every statement before you go. This line is always understated.' },
+    { id: 'cpa', label: 'CPA / tax prep reserve', group: 'Business', amount: 125, conf: 'Placeholder', note: 'Expat filing adds forms. Budget the higher end.' },
+    { id: 'entity', label: 'Entity / compliance / insurance', group: 'Business', amount: 75, conf: 'Placeholder', note: 'S-Corp fees, registrations, business liability.' },
+    { id: 'vpn', label: 'VPN / password manager / backups', group: 'Digital', amount: 25, conf: 'Placeholder', note: 'A VPN is effectively mandatory for US banking from abroad.' },
+    { id: 'fun', label: 'Entertainment subscriptions', group: 'Personal', amount: 50, conf: 'Placeholder', note: '' },
+    { id: 'bankFx', label: 'ATM, FX + wire fees', group: 'On the road', amount: 45, conf: 'ADDED', added: true, note: 'ADDED — not in your CSV. 2–4% FX spread plus $3–8 per ATM pull adds up fast in cash economies.' },
+    { id: 'hops', label: 'In-region hops + board bag fees', group: 'On the road', amount: 150, conf: 'ADDED', added: true, note: 'ADDED — not in your CSV. The $6k long-haul line covers continent jumps only. Bali→Sumbawa, Lima→Piura, ferries and $75–150 board fees every leg live here.' },
+    { id: 'visaRuns', label: 'Visa extensions, onward tickets', group: 'On the road', amount: 40, conf: 'ADDED', added: true, note: 'ADDED — not in your CSV. Indo 60-day extensions, throwaway onward tickets, agent fees. Distinct from the $2,000 one-time visa/vaccine reserve.' }
+  ];
+
+  // Variable travel burn by region (CSV: Travel Burn)
+  var REGIONS = [
+    { id: 'csa', label: 'Central & South America', short: 'Americas', amount: 3000, color: '#BF8430', note: 'Housing, food, local transport, in-country surf travel.' },
+    { id: 'aus', label: 'Australia (van life)', short: 'Australia', amount: 4000, color: '#18A276', note: 'Fuel, campsites, food, insurance, repairs. Excludes the van itself.' },
+    { id: 'sea', label: 'SE Asia / Sri Lanka / Indo / Philippines', short: 'SE Asia', amount: 2500, color: '#4487DE', note: 'Cheapest region by a wide margin.' }
+  ];
+
+  // One-time trip costs (CSV: Travel Burn one-time, + ADDED)
+  var ONETIME = [
+    { id: 'longHaul', label: 'Long-haul flights + board fees', amount: 6000, conf: 'Planning', scales: true, note: 'Major continent repositioning. 24-month planning value; scales with trip length.' },
+    { id: 'van', label: 'Australia van: buy/sell loss + repairs', amount: 4000, conf: 'Planning', needsAus: true, note: 'Net loss after resale, plus setup and repairs. Drops to $0 if you skip Australia.' },
+    { id: 'charter', label: 'Boat charter / liveaboard block', amount: 0, conf: 'ADDED', added: true, charter: true, note: 'ADDED — not in your CSV. Mentawai or Maldives charters run $1,800–4,500 per week per person; a bareboat yacht in Indo or Tonga runs higher. Set weeks and rate below.' }
+  ];
+
+  // Irregular reserves (CSV: Reserves) — scaled by the emergency multiplier
+  var RESERVES = [
+    { id: 'boards', label: 'Surfboards, wetsuits, ding repair', amount: 3000, conf: 'Planning', note: '24-month reserve. Snapped boards in Indo and Puerto are a when, not an if.' },
+    { id: 'tech', label: 'Laptop / phone / camera replacement', amount: 2500, conf: 'Planning', note: 'Theft, salt, and drops. Your income depends on the laptop.' },
+    { id: 'medical', label: 'Medical / dental / deductibles', amount: 2500, conf: 'Planning', note: 'Reef cuts, staph, dental. Out of pocket before insurance pays.' },
+    { id: 'flightHome', label: 'Emergency flight home', amount: 2500, conf: 'Planning', note: 'Last-minute one-way from the far side of the world.' },
+    { id: 'visas', label: 'Visas, permits, vaccines, licences', amount: 2000, conf: 'Planning', note: 'Entry fees, IDP, rabies and typhoid series, dive/boat permits.' },
+    { id: 'misc', label: 'General unexpected reserve', amount: 5000, conf: 'Planning', note: 'Missed flights, lost deposits, damage, the thing you did not think of.' }
+  ];
+
+  /* ---- Default lever state --------------------------------------------- */
+
+  var DEFAULTS = {
+    monthsToDeparture: 6,
+    tripMonths: 24,
+    months: { csa: 6, aus: 6, sea: 12 },
+    regionOrder: ['aus', 'sea', 'csa'],
+    route: null,          // set by the Adventure tab
+    useRouteCosts: true,  // use each place's real monthly cost, not the regional average
+    lifestyle: 1.0,
+    emergency: 1.0,
+    remoteIncome: 0,
+    preIncome: 0,
+    autoSolve: true,
+    taxPct: 0.28,
+    pipelinePct: 0.8,
+    taxPipeline: true,
+    leucadia: 4500,
+    landingFund: 15000,
+    payCard: true,
+    payLoan: false,
+    doEurope: true,
+    scaleOneTime: true,
+    charterWeeks: 2,
+    charterRate: 2200,
+    charterOn: true,
+    liquidateStocks: false,
+    releaseEquity: false,
+    equityAmount: 40000,
+    start: {}, pre: {}, fixed: {}, region: {}, onetime: {}, reserve: {}
+  };
+  START.forEach(function (r) { DEFAULTS.start[r.id] = r.amount; });
+  PRE.forEach(function (r) { DEFAULTS.pre[r.id] = r.amount; });
+  FIXED.forEach(function (r) { DEFAULTS.fixed[r.id] = r.amount; });
+  REGIONS.forEach(function (r) { DEFAULTS.region[r.id] = r.amount; });
+  ONETIME.forEach(function (r) { DEFAULTS.onetime[r.id] = r.amount; });
+  RESERVES.forEach(function (r) { DEFAULTS.reserve[r.id] = r.amount; });
+
+  /* ---- Helpers ---------------------------------------------------------- */
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function sum(a) { return a.reduce(function (x, y) { return x + y; }, 0); }
+  function monthsBetween(from, y, m) { return (y - from.getFullYear()) * 12 + (m - from.getMonth()); }
+  function addMonths(d, n) { return new Date(d.getFullYear(), d.getMonth() + n, 1); }
+
+  /* ---- The model -------------------------------------------------------- */
+
+  function compute(s) {
+    var T = Math.max(1, Math.round(s.tripMonths));
+    var M = Math.max(0, Math.round(s.monthsToDeparture));
+    var L = s.lifestyle, E = s.emergency;
+
+    // --- monthly fixed overhead that follows you abroad -------------------
+    var fixedRows = FIXED.map(function (r) {
+      var amt = num(s.fixed[r.id], r.amount);
+      return { id: r.id, label: r.label, group: r.group, conf: r.conf, note: r.note,
+               added: !!r.added, monthly: amt, trip: amt * T };
+    });
+    var fixedMonthly = sum(fixedRows.map(function (r) { return r.monthly; }));
+
+    // --- variable travel burn by region ----------------------------------
+    // A route from the Adventure tab (s.schedule) overrides the flat regional
+    // averages with the real monthly cost of each place, in the order visited.
+    var sched = buildSchedule(s, T);
+    var regionRows = REGIONS.map(function (r) {
+      var mo, total;
+      if (sched) {
+        var mine = sched.filter(function (x) { return x.rid === r.id; });
+        mo = mine.length;
+        total = sum(mine.map(function (x) { return x.cost; })) * L;
+      } else {
+        mo = Math.max(0, num(s.months[r.id], 0));
+        total = num(s.region[r.id], r.amount) * L * mo;
+      }
+      return { id: r.id, label: r.label, short: r.short, color: r.color, note: r.note,
+               months: mo, burn: mo > 0 ? total / mo : num(s.region[r.id], r.amount) * L, total: total };
+    });
+    var regionMonths = sum(regionRows.map(function (r) { return r.months; }));
+    var travelTotal = sum(regionRows.map(function (r) { return r.total; }));
+    var travelMonthlyAvg = regionMonths > 0 ? travelTotal / regionMonths : 0;
+    regionRows.forEach(function (r) { r.share = travelTotal > 0 ? r.total / travelTotal : 0; });
+
+    // --- one-time trip costs ---------------------------------------------
+    var ausMonths = (regionRows.filter(function (r) { return r.id === 'aus'; })[0] || {}).months || 0;
+    var oneRows = ONETIME.map(function (r) {
+      var amt;
+      if (r.charter) amt = s.charterOn ? s.charterWeeks * s.charterRate : 0;
+      else {
+        amt = num(s.onetime[r.id], r.amount);
+        if (r.scales && s.scaleOneTime) amt = amt * (T / 24);
+        if (r.needsAus && ausMonths <= 0) amt = 0;
+      }
+      return { id: r.id, label: r.label, conf: r.conf, note: r.note, added: !!r.added, amount: amt };
+    });
+    var oneTimeTotal = sum(oneRows.map(function (r) { return r.amount; }));
+
+    // --- irregular reserves ----------------------------------------------
+    var reserveRows = RESERVES.map(function (r) {
+      var amt = num(s.reserve[r.id], r.amount) * E;
+      return { id: r.id, label: r.label, conf: r.conf, note: r.note, amount: amt };
+    });
+    var reserveTotal = sum(reserveRows.map(function (r) { return r.amount; }));
+
+    // --- headline trip cost ----------------------------------------------
+    var fixedTotal = fixedMonthly * T;
+    var tripCost = travelTotal + fixedTotal + oneTimeTotal + reserveTotal;
+    var burnAbroad = (travelMonthlyAvg + fixedMonthly);                 // recurring only
+    var burnAllIn = T > 0 ? tripCost / T : 0;                            // incl. one-times + reserves
+    var remoteTotal = s.remoteIncome * T;
+
+    var landing = num(s.landingFund, 15000);
+    var requiredAtZero = tripCost + landing;
+    var required = Math.max(0, tripCost + landing - remoteTotal);
+
+    // --- pre-departure cash math ------------------------------------------
+    var startSpendable = num(s.start.checking, 12000) + num(s.start.savings, 24000);
+    var pipelineGross = num(s.start.pipeline, 15000) * s.pipelinePct;
+    var pipelineNet = pipelineGross * (s.taxPipeline ? (1 - s.taxPct) : 1);
+
+    var preOutflows = num(s.leucadia, 4500) * M
+      + (s.doEurope ? num(s.pre.europe, 3000) : 0)
+      + num(s.pre.taxes2026, 10000)
+      + (s.payCard ? num(s.pre.bizCard, 20000) : 0)
+      + (s.payLoan ? num(s.pre.loanPayoff, 18000) : 0);
+
+    var backstopCash = (s.liquidateStocks ? num(s.start.stocks, 60000) : 0)
+      + (s.releaseEquity ? num(s.equityAmount, 40000) : 0);
+
+    // Required new gross income before departure, solved from the identity:
+    //   start + pipelineNet + G(1 - tax) + backstops - preOutflows = required
+    var requiredGross = Math.max(0,
+      (required + preOutflows - startSpendable - pipelineNet - backstopCash) / (1 - s.taxPct));
+    var requiredMonthlyGross = M > 0 ? requiredGross / M : Infinity;
+
+    var G = s.autoSolve ? requiredGross : Math.max(0, num(s.preIncome, 0));
+    var departureCash = startSpendable + pipelineNet + backstopCash
+      + G * (1 - s.taxPct) - preOutflows;
+
+    var gap = required - departureCash;
+    var fundedPct = required > 0 ? departureCash / required : 1;
+    var endingCash = departureCash - tripCost + remoteTotal;
+
+    // --- month-by-month trajectory ----------------------------------------
+    var traj = buildTrajectory(s, {
+      M: M, T: T, G: G, startSpendable: startSpendable, pipelineNet: pipelineNet,
+      backstopCash: backstopCash, fixedMonthly: fixedMonthly, regionRows: regionRows,
+      oneRows: oneRows, reserveTotal: reserveTotal, ausMonths: ausMonths, landing: landing,
+      sched: sched
+    });
+
+    // --- how long the pre-departure sprint has to run at a given monthly gross
+    function sprintMonths(monthlyGross) {
+      var fixedPre = (s.doEurope ? num(s.pre.europe, 3000) : 0) + num(s.pre.taxes2026, 10000)
+        + (s.payCard ? num(s.pre.bizCard, 20000) : 0) + (s.payLoan ? num(s.pre.loanPayoff, 18000) : 0);
+      var perMonth = monthlyGross * (1 - s.taxPct) - num(s.leucadia, 4500);
+      if (perMonth <= 0) return Infinity;
+      return (required + fixedPre - startSpendable - pipelineNet - backstopCash) / perMonth;
+    }
+
+    // Runway: months of travel before cash crosses the protected landing floor
+    var runway = T, crossed = false;
+    for (var i = 0; i < traj.length; i++) {
+      if (traj[i].phase === 'trip' && traj[i].cash < landing - 1) { runway = traj[i].tripMonth - 1; crossed = true; break; }
+    }
+    var minCash = Math.min.apply(null, traj.map(function (p) { return p.cash; }));
+
+    // --- break-even remote income ------------------------------------------
+    var breakEven = burnAbroad;
+    var breakEvenAllIn = burnAllIn;
+
+    // --- one more month of grinding ----------------------------------------
+    var expectedMonthlyGross = s.autoSolve ? requiredMonthlyGross : (M > 0 ? G / M : 0);
+    var oneMoreMonth = expectedMonthlyGross * (1 - s.taxPct) - num(s.leucadia, 4500);
+
+    return {
+      T: T, M: M,
+      departureDate: addMonths(TODAY, M + 1), lastGrindDate: addMonths(TODAY, M),
+      returnDate: addMonths(TODAY, M + T),
+      fixedRows: fixedRows.slice().sort(function (a, b) { return b.trip - a.trip; }),
+      fixedMonthly: fixedMonthly, fixedTotal: fixedTotal,
+      regionRows: regionRows, regionMonths: regionMonths,
+      travelTotal: travelTotal, travelMonthlyAvg: travelMonthlyAvg,
+      oneRows: oneRows, oneTimeTotal: oneTimeTotal,
+      reserveRows: reserveRows, reserveTotal: reserveTotal,
+      tripCost: tripCost, landing: landing,
+      requiredAtZero: requiredAtZero, required: required,
+      remoteTotal: remoteTotal,
+      startSpendable: startSpendable, pipelineGross: pipelineGross, pipelineNet: pipelineNet,
+      preOutflows: preOutflows, backstopCash: backstopCash,
+      requiredGross: requiredGross, requiredMonthlyGross: requiredMonthlyGross,
+      preIncomeUsed: G, departureCash: departureCash,
+      gap: gap, fundedPct: fundedPct, endingCash: endingCash,
+      burnAbroad: burnAbroad, burnAllIn: burnAllIn,
+      breakEven: breakEven, breakEvenAllIn: breakEvenAllIn,
+      oneMoreMonth: oneMoreMonth, expectedMonthlyGross: expectedMonthlyGross,
+      sprintMonths: sprintMonths, sched: sched,
+      traj: traj, runway: runway, runwayCrossed: crossed, minCash: minCash,
+      touchesInvestments: s.liquidateStocks, touchesEquity: s.releaseEquity,
+      flags: validate(s, { regionMonths: regionMonths, T: T, gap: gap, minCash: minCash, landing: landing, M: M })
+    };
+  }
+
+  /* One entry per month abroad: which region, which place, what it costs.
+     Returns null when no route is set, and the flat regional averages apply. */
+  function buildSchedule(s, T) {
+    if (!s.route || !s.route.length || !s.useRouteCosts) return null;
+    var out = [];
+    s.route.forEach(function (leg) {
+      var n = Math.max(0, Math.round(leg.months));
+      for (var i = 0; i < n && out.length < T; i++) {
+        out.push({ rid: leg.rid, cost: leg.cost, spotId: leg.spot, label: leg.name, first: i === 0 });
+      }
+    });
+    if (!out.length) return null;
+    // Short routes fall back to the last leg's region for the remaining months
+    var last = out[out.length - 1];
+    while (out.length < T) out.push({ rid: last.rid, cost: last.cost, spotId: last.spotId, label: last.label + ' (unplanned)', first: false, filler: true });
+    return out.slice(0, T);
+  }
+
+  /* Month-by-month cash path from today through the end of the trip. */
+  function buildTrajectory(s, c) {
+    var pts = [], cash = c.startSpendable + c.backstopCash;
+    var M = c.M, T = c.T;
+    var monthlyGross = M > 0 ? c.G / M : 0;
+    var pipelineMonths = Math.min(3, Math.max(1, M));
+    var novIdx = clampIdx(monthsBetween(TODAY, 2026, 10), 1, M);   // November 2026
+    var febIdx = clampIdx(monthsBetween(TODAY, 2027, 1), 1, M);    // February 2027, 0% expiry
+    var taxIdx = Math.max(1, M);                                   // settle the 2026 bill before wheels up
+
+    pts.push({ i: 0, date: new Date(TODAY), phase: 'now', cash: cash, label: 'Today',
+               income: 0, spend: 0, note: 'Checking + savings' + (c.backstopCash ? ' + released backstops' : '') });
+
+    for (var i = 1; i <= M; i++) {
+      var income = monthlyGross * (1 - s.taxPct);
+      if (i <= pipelineMonths) income += c.pipelineNet / pipelineMonths;
+      var spend = num(s.leucadia, 4500);
+      var events = [];
+      if (s.doEurope && i === novIdx) { spend += num(s.pre.europe, 3000); events.push('Europe trip'); }
+      if (s.payCard && i === febIdx) { spend += num(s.pre.bizCard, 20000); events.push('Card payoff — 0% expires'); }
+      if (i === taxIdx) { spend += num(s.pre.taxes2026, 10000); events.push('2026 tax bill'); }
+      if (s.payLoan && i === M) { spend += num(s.pre.loanPayoff, 18000); events.push('Student loan payoff'); }
+      cash += income - spend;
+      pts.push({ i: i, date: addMonths(TODAY, i), phase: 'pre', cash: cash, income: income, spend: spend,
+                 label: 'Grind month ' + i, note: events.join(' · ') || 'Leucadia living + new income' });
+    }
+
+    // Month-by-month region schedule: the route if there is one, else the
+    // regions in order, in contiguous blocks.
+    var sched = c.sched;
+    if (!sched) {
+      sched = [];
+      (s.regionOrder || ['csa', 'aus', 'sea']).forEach(function (rid) {
+        var r = REGIONS.filter(function (x) { return x.id === rid; })[0];
+        var mo = Math.max(0, num(s.months[rid], 0));
+        for (var k = 0; k < mo; k++) sched.push({ rid: rid, first: k === 0, cost: num(s.region[rid], r.amount), label: r.short });
+      });
+    }
+
+    // A long-haul leg is a change of region, not a change of town.
+    var hops = 0, prev = null;
+    sched.forEach(function (x) { x.hop = x.rid !== prev; if (x.hop) hops++; prev = x.rid; });
+    hops = hops || 1;
+
+    var oneById = {}; c.oneRows.forEach(function (r) { oneById[r.id] = r.amount; });
+    var perHopFlight = oneById.longHaul / hops;
+    var reservePerMonth = T > 0 ? c.reserveTotal / T : 0;
+    var charterMonth = firstCharterMonth(sched, T);
+    var seenAus = false;
+
+    for (var j = 1; j <= T; j++) {
+      var slot = sched[j - 1] || { rid: 'sea', cost: 0, hop: false, label: '—' };
+      var burn = slot.cost * s.lifestyle;
+      var spend = c.fixedMonthly + burn + reservePerMonth;
+      var ev = [];
+      if (slot.hop) { spend += perHopFlight; ev.push('Long-haul to ' + slot.label); }
+      if (slot.rid === 'aus' && !seenAus) { spend += oneById.van; ev.push('Van purchase + setup'); seenAus = true; }
+      if (j === charterMonth && oneById.charter > 0) { spend += oneById.charter; ev.push('Boat charter block'); }
+      cash += s.remoteIncome - spend;
+      pts.push({ i: M + j, tripMonth: j, date: addMonths(TODAY, M + j), phase: 'trip', cash: cash,
+                 income: s.remoteIncome, spend: spend, burn: burn, region: slot.rid,
+                 label: slot.label, place: slot.label,
+                 note: ev.join(' · ') || (slot.label + ' burn + home-break overhead') });
+    }
+    return pts;
+  }
+
+  /* The charter lands in the first Mentawai or Maldives month if the route has
+     one, otherwise 60% of the way through the trip. */
+  function firstCharterMonth(sched, T) {
+    for (var i = 0; i < sched.length; i++) {
+      if (sched[i].spotId === 'mentawais' || sched[i].spotId === 'maldives') return i + 1;
+    }
+    return Math.min(T, Math.max(1, Math.round(T * 0.6)));
+  }
+
+  function validate(s, c) {
+    var f = [];
+    if (c.regionMonths !== c.T) {
+      f.push({ level: 'error', text: 'Region months total ' + c.regionMonths + ' but the trip is ' + c.T + ' months. ' +
+        (c.regionMonths < c.T ? (c.T - c.regionMonths) + ' months are unplanned and unbudgeted.' : 'You are over by ' + (c.regionMonths - c.T) + '.') });
+    }
+    if (c.M === 0) f.push({ level: 'warn', text: 'Zero months until departure — you leave on whatever cash you hold today.' });
+    if (s.liquidateStocks) f.push({ level: 'warn', text: 'Investment liquidation is ON. Stocks/401(k) are being counted as travel cash, against your stated preference.' });
+    if (s.releaseEquity) f.push({ level: 'warn', text: 'Condo equity release is ON. You are borrowing against or selling the condo to fund the trip.' });
+    if (s.payLoan) f.push({ level: 'warn', text: 'Student loan payoff is ON — the $18k balance is being treated as a pre-departure cash expense.' });
+    if (!s.payCard) f.push({ level: 'error', text: 'Card payoff is OFF. The 0% promo expires in February 2027 and the balance starts accruing interest while you are abroad.' });
+    if (c.minCash < 0) f.push({ level: 'error', text: 'Cash goes negative at some point in this plan. The trajectory chart shows where.' });
+    else if (c.minCash < c.landing - 1) f.push({ level: 'warn', text: 'Cash dips below the protected landing fund before the trip ends.' });
+    if (s.fixedVal && s.fixedVal.studentLoanPmt === 0) f.push({ level: 'info', text: 'Student loan payment is still $0 — INPUT NEEDED.' });
+    return f;
+  }
+
+  function num(v, d) { var n = parseFloat(v); return isFinite(n) ? n : d; }
+  function clampIdx(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  /* ---- Scenario presets -------------------------------------------------- */
+
+  function scaleRegions(base, T) {
+    var total = base.csa + base.aus + base.sea || 1;
+    var r = { csa: Math.round(base.csa / total * T), aus: Math.round(base.aus / total * T) };
+    r.sea = T - r.csa - r.aus;
+    return r;
+  }
+
+  var SCENARIOS = [
+    { id: 'lean18', name: 'Lean 18', sub: '18 months · $0 remote · lean lifestyle',
+      patch: { tripMonths: 18, lifestyle: 0.8, remoteIncome: 0, months: scaleRegions({ csa: 6, aus: 6, sea: 12 }, 18) } },
+    { id: 'base24', name: 'Base 24', sub: '24 months · $0 remote',
+      patch: { tripMonths: 24, lifestyle: 1.0, remoteIncome: 0, months: { csa: 6, aus: 6, sea: 12 } } },
+    { id: 'base24k2', name: 'Base 24 + $2k', sub: '24 months · $2,000/mo remote',
+      patch: { tripMonths: 24, lifestyle: 1.0, remoteIncome: 2000, months: { csa: 6, aus: 6, sea: 12 } } },
+    { id: 'comfy', name: 'Comfortable 24', sub: '24 months · $3,000/mo remote · 1.25× lifestyle',
+      patch: { tripMonths: 24, lifestyle: 1.25, remoteIncome: 3000, months: { csa: 6, aus: 6, sea: 12 } } }
+  ];
+
+  /* What each lever is worth, in dollars off the required departure cash.
+     Ranked, so the biggest move is obvious without hunting through sliders. */
+  function leverRank(state) {
+    var base = compute(state).required;
+    var tries = [
+      { label: 'Cut the trip to 18 months', patch: { tripMonths: 18, months: scaleRegions(state.months, 18), route: trimRoute(state.route, 18) } },
+      { label: 'Earn $2,000/mo remotely', patch: { remoteIncome: 2000 } },
+      { label: 'Earn $3,000/mo remotely', patch: { remoteIncome: 3000 } },
+      { label: 'Travel lean (0.8× lifestyle)', patch: { lifestyle: 0.8 } },
+      { label: 'Kill storage, vehicle, subscriptions', patch: { fixed: Object.assign({}, state.fixed, { storage: 0, vehicle: 0, fun: 0, software: 40 }) } },
+      { label: 'Sell the condo instead of renting it', patch: { fixed: Object.assign({}, state.fixed, { condoShortfall: 0, propMgmt: 0, condoReserve: 0 }) } },
+      { label: 'Swap Australia for more SE Asia', patch: swapAus(state) },
+      { label: 'Skip the boat charter', patch: { charterOn: false } },
+      { label: 'Drop the landing fund to $10k', patch: { landingFund: 10000 } }
+    ];
+    return tries.map(function (t) {
+      var s = clone(state);
+      Object.keys(t.patch).forEach(function (k) { s[k] = t.patch[k]; });
+      var r = compute(s);
+      return { label: t.label, saves: base - r.required, required: r.required,
+               monthly: r.requiredMonthlyGross };
+    }).sort(function (a, b) { return b.saves - a.saves; });
+  }
+
+  /* Australia is the expensive region. This swaps its months into SE Asia at
+     SE Asia's own cost, keeping the trip the same length. */
+  function swapAus(state) {
+    var m = { csa: state.months.csa, aus: 0, sea: state.months.sea + state.months.aus };
+    if (!state.route || !state.useRouteCosts) return { months: m };
+    var seaCost = 1800, route = [];
+    state.route.forEach(function (leg) {
+      if (leg.rid === 'aus') route.push({ spot: 'sea-swap', months: leg.months, rid: 'sea', cost: seaCost, name: 'SE Asia (swapped)' });
+      else route.push(leg);
+    });
+    return { months: m, route: route };
+  }
+
+  function trimRoute(route, T) {
+    if (!route) return route;
+    var out = [], left = T;
+    for (var i = 0; i < route.length && left > 0; i++) {
+      var n = Math.min(route[i].months, left);
+      out.push(Object.assign({}, route[i], { months: n }));
+      left -= n;
+    }
+    return out;
+  }
+
+  function runScenario(state, patch) {
+    var s = clone(state);
+    Object.keys(patch).forEach(function (k) { s[k] = patch[k]; });
+    if (patch.tripMonths && s.route && !patch.route) s.route = trimRoute(s.route, patch.tripMonths);
+    s.autoSolve = true;
+    return compute(s);
+  }
+
+  var API = {
+    TODAY: TODAY, START: START, PRE: PRE, FIXED: FIXED, REGIONS: REGIONS,
+    ONETIME: ONETIME, RESERVES: RESERVES, DEFAULTS: DEFAULTS, SCENARIOS: SCENARIOS,
+    compute: compute, runScenario: runScenario, clone: clone, scaleRegions: scaleRegions,
+    addMonths: addMonths, leverRank: leverRank, trimRoute: trimRoute
+  };
+
+  root.SF = API;
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+</script>
+<script>/* ==========================================================================
+   SWELL FUND — surf destinations
+   season: months the spot actually works (1 = Jan). cost: solo monthly all-in,
+   housing + food + local transport, in the region's own currency converted to USD.
+   wifi: 1 = phone tether only, 5 = fibre, take a client call.
+   utc: standard offset, used to compute the overlap with a San Diego workday.
+   ========================================================================== */
+(function (root) {
+  'use strict';
+
+  function m(a, b) { var out = []; for (var i = a; i !== (b % 12) + 1; i = (i % 12) + 1) out.push(i); return out; }
+
+  var SPOTS = [
+    /* ---- Central & South America ------------------------------------- */
+    { id: 'puerto', name: 'Puerto Escondido', country: 'Mexico', region: 'csa', lat: 15.86, lng: -97.07,
+      season: m(4, 9), peak: 'May–Aug', cost: 2200, wifi: 4, utc: -6, level: 'Expert',
+      wave: 'Heaviest beach break on earth. Zicatela barrels, La Punta for the longboard days.',
+      visa: '180 days on arrival, no visa needed.', board: 'Fly OAX or HUX. Domestic hops charge $60–90 per board bag.',
+      watch: 'Serious drownings every season. La Punta is the safe half of town.' },
+    { id: 'salina', name: 'Salina Cruz', country: 'Mexico', region: 'csa', lat: 16.17, lng: -95.20,
+      season: m(4, 9), peak: 'Apr–Sep', cost: 2600, wifi: 2, utc: -6, level: 'Advanced',
+      wave: 'A hundred kilometres of empty sand-bottom right points.',
+      visa: '180 days on arrival.', board: 'Guide trucks are the only realistic access — $80–120/day including boat and driver.',
+      watch: 'Guide fees are the budget line people forget. Costs more than Puerto to surf.' },
+    { id: 'tunco', name: 'El Tunco / Punta Roca', country: 'El Salvador', region: 'csa', lat: 13.49, lng: -89.38,
+      season: m(3, 10), peak: 'Apr–Sep', cost: 1800, wifi: 3, utc: -6, level: 'Intermediate',
+      wave: 'Cobblestone rights that run forever. Punta Roca is world class on a solid SW.',
+      visa: '90 days CA-4 zone, covers Guatemala, Honduras and Nicaragua too.', board: 'SAL airport is 45 minutes away. One of the cheapest board-friendly arrivals in the Americas.',
+      watch: 'The CA-4 clock is shared across four countries — leaving to Nicaragua does not reset it.' },
+    { id: 'popoyo', name: 'Popoyo', country: 'Nicaragua', region: 'csa', lat: 11.47, lng: -86.13,
+      season: m(3, 10), peak: 'Apr–Sep', cost: 1900, wifi: 3, utc: -6, level: 'Intermediate',
+      wave: 'Offshore ~300 days a year on the Lake Nicaragua wind. Outer reef holds size.',
+      visa: '90 days CA-4.', board: 'MGA then a 3-hour shuttle. Bring spare fins, nothing is sold locally.',
+      watch: 'Dry-season wind is the whole point here, and it also makes it dusty and hot.' },
+    { id: 'santacat', name: 'Santa Catalina', country: 'Panama', region: 'csa', lat: 7.63, lng: -81.27,
+      season: m(4, 10), peak: 'Apr–Oct', cost: 2000, wifi: 3, utc: -5, level: 'Intermediate',
+      wave: 'Rock-shelf right that handles real swell. Jump-off point for Isla Cébaco boats.',
+      visa: '180 days on arrival.', board: 'PTY then 7 hours overland, or fly to David.',
+      watch: 'Low tide over that shelf is unforgiving. Reef booties earn their space in the bag.' },
+    { id: 'pavones', name: 'Pavones', country: 'Costa Rica', region: 'csa', lat: 8.39, lng: -83.13,
+      season: m(4, 10), peak: 'May–Aug', cost: 2600, wifi: 3, utc: -6, level: 'Intermediate',
+      wave: 'Two-minute left point on a big south swell. One of the longest lefts anywhere.',
+      visa: '180 days, proof of onward travel enforced at the airport.', board: 'SJO then 8 hours, or fly to Golfito. Board bags on the domestic prop plane are a gamble.',
+      watch: 'It only breaks properly on a real south swell. Check the forecast before committing a month.' },
+    { id: 'santateresa', name: 'Santa Teresa', country: 'Costa Rica', region: 'csa', lat: 9.64, lng: -85.17,
+      season: m(3, 10), peak: 'Apr–Oct', cost: 3200, wifi: 4, utc: -6, level: 'All levels',
+      wave: 'Consistent beach break, works nearly every day, gets crowded because of it.',
+      visa: '180 days, onward ticket required.', board: 'The most expensive coast in Central America and the best connected.',
+      watch: 'Costa Rica prices are close to California prices. Budget accordingly.' },
+    { id: 'ayampe', name: 'Ayampe / Montañita', country: 'Ecuador', region: 'csa', lat: -1.67, lng: -80.78,
+      season: m(12, 4), peak: 'Jan–Mar', cost: 1700, wifi: 3, utc: -5, level: 'Intermediate',
+      wave: 'Northern-hemisphere swell window — the answer for December through March in the Americas.',
+      visa: '90 days on arrival.', board: 'GYE then 3 hours. USD currency, so no FX spread at all.',
+      watch: 'Opposite season to everywhere else on this coast. That is exactly why it is here.' },
+    { id: 'lobitos', name: 'Lobitos', country: 'Peru', region: 'csa', lat: -4.45, lng: -81.28,
+      season: m(4, 10), peak: 'Apr–Sep', cost: 1500, wifi: 2, utc: -5, level: 'Advanced',
+      wave: 'Cold, mechanical, sand-bottom lefts in an old oil town. Barrels most days.',
+      visa: '183 days per year on arrival.', board: 'Fly TAL, one hour from Máncora.',
+      watch: 'Water is cold for the latitude — the Humboldt current. Pack a 3/2 for the tropics.' },
+    { id: 'chicama', name: 'Chicama', country: 'Peru', region: 'csa', lat: -7.70, lng: -79.44,
+      season: m(4, 9), peak: 'Apr–Aug', cost: 1700, wifi: 3, utc: -5, level: 'Intermediate',
+      wave: 'The longest left on the planet. Two kilometres, and a boat back to the top.',
+      visa: '183 days per year.', board: 'TRU then 90 minutes. Boat lifts cost about $20 a session.',
+      watch: 'Cold and windy. A month here is a legs-of-steel month.' },
+    { id: 'floripa', name: 'Florianópolis', country: 'Brazil', region: 'csa', lat: -27.60, lng: -48.55,
+      season: m(4, 9), peak: 'May–Aug', cost: 2400, wifi: 4, utc: -3, level: 'All levels',
+      wave: 'Forty beaches on one island, so something works in any wind.',
+      visa: '90 days visa-free for US passports.', board: 'FLN is a proper airport and Brazil is board-friendly.',
+      watch: 'Strongest wifi and city infrastructure in South America — a good work month.' },
+    { id: 'lobos', name: 'Punta de Lobos', country: 'Chile', region: 'csa', lat: -34.42, lng: -72.05,
+      season: m(4, 9), peak: 'Apr–Aug', cost: 2200, wifi: 4, utc: -4, level: 'Advanced',
+      wave: 'Big, cold, serious left point. Pichilemu is the Chilean surf capital.',
+      visa: '90 days visa-free.', board: 'SCL then 3.5 hours. A 4/3 and booties, minimum.',
+      watch: 'Genuinely cold water year round. This is a wetsuit destination inside a boardshorts trip.' },
+
+    /* ---- Australia ----------------------------------------------------- */
+    { id: 'goldcoast', name: 'Gold Coast', country: 'Australia', region: 'aus', lat: -28.16, lng: 153.54,
+      season: m(1, 4), peak: 'Feb–Apr cyclone swell', cost: 4200, wifi: 5, utc: 10, level: 'All levels',
+      wave: 'Snapper, Kirra, Burleigh. Sand-bottom points and the best waves in the country when a cyclone lines up.',
+      visa: 'eVisitor / ETA, 3 months per entry, 12-month validity.', board: 'OOL airport lands you 10 minutes from Snapper.',
+      watch: 'The most crowded waves in the southern hemisphere. Van parking is heavily policed.' },
+    { id: 'byron', name: 'Byron Bay / Lennox', country: 'Australia', region: 'aus', lat: -28.64, lng: 153.61,
+      season: m(2, 6), peak: 'Mar–Jun', cost: 4500, wifi: 4, utc: 10, level: 'All levels',
+      wave: 'The Pass on an east swell, Lennox Head point when it gets big.',
+      visa: 'eVisitor, 3 months per entry.', board: 'One hour from OOL. Van-friendly coast if you know the spots.',
+      watch: 'Rents and groceries here are the most expensive on the trip. Van life is not optional, it is the budget.' },
+    { id: 'noosa', name: 'Noosa', country: 'Australia', region: 'aus', lat: -26.39, lng: 153.09,
+      season: m(12, 3), peak: 'Dec–Mar', cost: 4000, wifi: 5, utc: 10, level: 'All levels',
+      wave: 'Perfect, slow, right-hand points inside a national park. Needs a cyclone swell to switch on.',
+      visa: 'eVisitor.', board: 'Two hours north of Brisbane.',
+      watch: 'Only breaks a handful of weeks a year. Park nearby, do not plan a month around it.' },
+    { id: 'sydney', name: 'Sydney Northern Beaches', country: 'Australia', region: 'aus', lat: -33.74, lng: 151.29,
+      season: m(3, 9), peak: 'Apr–Aug', cost: 4800, wifi: 5, utc: 10, level: 'All levels',
+      wave: 'Twenty beaches on a bus line. Nothing world class, everything consistent.',
+      visa: 'eVisitor.', board: 'SYD is the best-connected airport on the route.',
+      watch: 'The work month of Australia — fastest internet, biggest cost. Time it for client-heavy stretches.' },
+    { id: 'bells', name: 'Bells Beach / Torquay', country: 'Australia', region: 'aus', lat: -38.37, lng: 144.28,
+      season: m(4, 9), peak: 'Apr–Sep southern winter', cost: 3900, wifi: 4, utc: 10, level: 'Advanced',
+      wave: 'Southern Ocean power. Winston and Bells hold serious size all winter.',
+      visa: 'eVisitor.', board: '90 minutes from Melbourne. Free and cheap campsites along the Great Ocean Road.',
+      watch: 'Winter here is 12°C water and 4/3 with a hood. This is the cold half of van life.' },
+    { id: 'margarets', name: 'Margaret River', country: 'Australia', region: 'aus', lat: -33.96, lng: 114.99,
+      season: m(4, 10), peak: 'Apr–Sep southern winter', cost: 3800, wifi: 4, utc: 8, level: 'Advanced',
+      wave: 'Main Break, North Point, The Box. Heavy reef and relentless Indian Ocean swell.',
+      visa: 'eVisitor.', board: 'Fly PER then 3 hours south. Best winter swell window in Australia.',
+      watch: 'White sharks are a real consideration on this coast, not a cliché.' },
+    { id: 'gnaraloo', name: 'Gnaraloo / Red Bluff', country: 'Australia', region: 'aus', lat: -23.79, lng: 113.51,
+      season: m(4, 9), peak: 'May–Aug', cost: 3200, wifi: 1, utc: 8, level: 'Expert',
+      wave: 'Left-hand reef in the desert. Camp on the cliff, surf with nobody.',
+      visa: 'eVisitor.', board: 'Twelve hours north of Perth on one road. 4WD and water tanks.',
+      watch: 'No phone signal, no services, no medical. A satellite messenger is the honest minimum.' },
+
+    /* ---- SE Asia, Sri Lanka, Indonesia, Philippines --------------------- */
+    { id: 'bali', name: 'Bali — Uluwatu / Canggu', country: 'Indonesia', region: 'sea', lat: -8.81, lng: 115.09,
+      season: m(4, 10), peak: 'May–Sep dry season', cost: 2200, wifi: 5, utc: 8, level: 'All levels',
+      wave: 'The Bukit reefs on every dry-season swell, Keramas and the east when the wind swings.',
+      visa: 'B1 visa on arrival, 30 days, extends once to 60. E-visa B211A runs 60 + 60 + 60.',
+      board: 'DPS is the hub of the entire region. Board repair and new boards are cheap and everywhere.',
+      watch: 'The best work base on the trip: fibre internet, cafés, and a flight to anywhere in Indo.' },
+    { id: 'lombok', name: 'Lombok / Desert Point', country: 'Indonesia', region: 'sea', lat: -8.75, lng: 115.83,
+      season: m(5, 9), peak: 'Jun–Aug', cost: 1800, wifi: 3, utc: 8, level: 'Expert',
+      wave: 'Desert Point is a ten-second barrel over dry reef. Kuta Lombok has the beginner bays.',
+      visa: 'Same Indonesian visa clock as Bali — it does not reset by island hopping.',
+      board: 'Fast boat or 30-minute flight from Bali.',
+      watch: 'Deserts breaks maybe 30 days a year and the crowd knows the forecast too.' },
+    { id: 'sumbawa', name: 'Sumbawa — Lakey Peak', country: 'Indonesia', region: 'sea', lat: -8.86, lng: 118.30,
+      season: m(4, 9), peak: 'May–Aug', cost: 1700, wifi: 2, utc: 8, level: 'Advanced',
+      wave: 'Three world-class waves in one bay: Lakey Peak, Lakey Pipe, Periscopes.',
+      visa: 'Indonesian visa clock.', board: 'Fly to Bima then 2 hours, or the long overland-and-ferry haul.',
+      watch: 'Cheapest good waves in Indonesia. Bring cash — ATMs are unreliable and often empty.' },
+    { id: 'mentawais', name: 'Mentawai Islands', country: 'Indonesia', region: 'sea', lat: -1.95, lng: 99.60,
+      season: m(4, 10), peak: 'May–Sep', cost: 4500, wifi: 1, utc: 7, level: 'Advanced',
+      wave: 'The densest concentration of perfect reef passes on earth. Boat or land camp.',
+      visa: 'Indonesian visa clock.', board: 'Padang then a 12-hour ferry, or a charter pickup. THIS is the boat-charter line in the model.',
+      watch: 'Charters run $1,800–4,500 per week per person. Malaria prophylaxis is worth the conversation.' },
+    { id: 'nias', name: 'Nias — Lagundri Bay', country: 'Indonesia', region: 'sea', lat: 0.58, lng: 97.75,
+      season: m(6, 9), peak: 'Jun–Sep', cost: 1500, wifi: 2, utc: 7, level: 'Advanced',
+      wave: 'A perfect right-hand barrel that breaks on the same reef every single swell.',
+      visa: 'Indonesian visa clock.', board: 'Fly to Gunungsitoli via Medan, then 3 hours.',
+      watch: 'Cheapest month you will have all trip. Also the most remote medical situation.' },
+    { id: 'arugam', name: 'Arugam Bay', country: 'Sri Lanka', region: 'sea', lat: 6.84, lng: 81.83,
+      season: m(5, 9), peak: 'Jun–Aug', cost: 1500, wifi: 3, utc: 5.5, level: 'All levels',
+      wave: 'Main Point is a forgiving right point. Whiskey Point and Peanut Farm for the empty days.',
+      visa: 'ETA online, 30 days, extends to 6 months in Colombo.',
+      board: 'CMB then 7 hours overland, or a domestic hop.',
+      watch: 'Exactly opposite season to the south coast — the island always has a working side.' },
+    { id: 'midigama', name: 'Midigama / Weligama', country: 'Sri Lanka', region: 'sea', lat: 5.96, lng: 80.39,
+      season: m(11, 4), peak: 'Dec–Mar', cost: 1600, wifi: 4, utc: 5.5, level: 'All levels',
+      wave: 'Lazy Left, Ram, Coconuts. Mellow reef and beach breaks 90 minutes from the airport.',
+      visa: 'ETA, extendable to 6 months.', board: 'The easiest arrival in Asia — highway straight from CMB.',
+      watch: 'The best November–March option in the region. Pairs with Arugam Bay to cover a full year.' },
+    { id: 'siargao', name: 'Siargao — Cloud 9', country: 'Philippines', region: 'sea', lat: 9.81, lng: 126.16,
+      season: m(8, 11), peak: 'Sep–Nov', cost: 1800, wifi: 3, utc: 8, level: 'Intermediate',
+      wave: 'Cloud 9 is a shallow right barrel with a boardwalk. A dozen quieter reefs around the island.',
+      visa: '30 days on arrival, extendable up to 36 months in-country.',
+      board: 'Fly via Cebu or Manila to Sayak. Typhoon season is also swell season.',
+      watch: 'The Sep–Nov window fills the gap when Indo has gone flat. Typhoon risk is real.' },
+    { id: 'maldives', name: 'Maldives — North Malé', country: 'Maldives', region: 'sea', lat: 4.18, lng: 73.51,
+      season: m(3, 10), peak: 'Apr–Sep', cost: 4000, wifi: 3, utc: 5, level: 'Intermediate',
+      wave: 'Warm, playful reef passes. Chickens, Cokes, Sultans within one boat ride.',
+      visa: '30 days free on arrival.', board: 'MLE is well connected. Guesthouse islands made this affordable; boats did not.',
+      watch: 'The other charter option. Guesthouse-and-ferry keeps it near $4k; a boat doubles it.' }
+  ];
+
+  var MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  /* Default course — your 6 / 6 / 12 split, resequenced so every single leg
+     lands inside its own season for a March 2027 departure. Australia comes
+     first because that puts van life in the southern winter, which is what
+     you asked for and what the swell charts agree with. */
+  var DEFAULT_ROUTE = [
+    { spot: 'bells', months: 2 },      // Apr–May 27    · Southern Ocean swell switches on
+    { spot: 'margarets', months: 3 },  // Jun–Aug 27    · peak WA winter, van life
+    { spot: 'sydney', months: 1 },     // Sep 27        · the work month: fastest wifi in Australia
+    { spot: 'mentawais', months: 1 },  // Oct 27        · the charter block lands here
+    { spot: 'siargao', months: 1 },    // Nov 27        · last of the typhoon swell
+    { spot: 'midigama', months: 4 },   // Dec 27–Mar 28 · Sri Lanka south coast season
+    { spot: 'tunco', months: 2 },      // Apr–May 28    · El Salvador points
+    { spot: 'puerto', months: 2 },     // Jun–Jul 28    · peak south swell
+    { spot: 'lobitos', months: 2 },    // Aug–Sep 28    · Peru winter
+    { spot: 'bali', months: 1 },       // Oct 28        · tail of the dry season
+    { spot: 'siargao', months: 1 },    // Nov 28        · Cloud 9 again
+    { spot: 'midigama', months: 4 }    // Dec 28–Mar 29 · back to the south coast, then home
+  ];
+
+  /* Work the trip supports — editable on the Adventure tab. */
+  var PROJECTS = [
+    { id: 'p1', name: 'Ship the app to paying users', why: 'The single lever that changes every number on the Treasure tab.', need: 4 },
+    { id: 'p2', name: 'Recurring revenue / subscription layer', why: '$2k/mo of recurring income cuts $48k off the required departure cash.', need: 4 },
+    { id: 'p3', name: 'Rep training content + onboarding', why: 'Records once, sells while you are in the water. Needs upload bandwidth.', need: 3 },
+    { id: 'p4', name: 'Pipeline follow-up + referrals', why: 'Calls into Pacific time. Only works where the overlap is workable.', need: 4 },
+    { id: 'p5', name: 'Film and edit the trip', why: 'Storage and upload heavy. Cheap months are the right months for it.', need: 2 },
+    { id: 'p6', name: 'Deep work: no calls, build only', why: 'The remote low-wifi legs are for this and nothing else.', need: 1 }
+  ];
+
+  var API = { SPOTS: SPOTS, MONTH_NAMES: MONTH_NAMES, DEFAULT_ROUTE: DEFAULT_ROUTE, PROJECTS: PROJECTS };
+  root.SFSPOTS = API;
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+</script>
+<script>/* ==========================================================================
+   SWELL FUND — interface
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var SPOTS = SFSPOTS.SPOTS, MN = SFSPOTS.MONTH_NAMES, PROJECTS = SFSPOTS.PROJECTS;
+  var byId = {}; SPOTS.forEach(function (s) { byId[s.id] = s; });
+  var REG = { csa: { name: 'Americas', color: '#BF8430' }, aus: { name: 'Australia', color: '#18A276' }, sea: { name: 'SE Asia', color: '#4487DE' } };
+  var STORE = 'swellfund.v1';
+
+  /* ---- state ------------------------------------------------------------ */
+
+  var S = SF.clone(SF.DEFAULTS);
+  S.route = SFSPOTS.DEFAULT_ROUTE.map(function (l, i) { return mkLeg(l.spot, l.months, i); });
+  S.tab = 'treasure';
+  S.monthFilter = 0;          // 0 = any month
+  S.regionFilter = 'all';
+  S.assign = {};              // legKey -> project id
+  syncMonths();
+  load();
+
+  function mkLeg(spotId, months, i) {
+    var sp = byId[spotId];
+    return { key: spotId + '-' + i + '-' + Math.random().toString(36).slice(2, 7),
+             spot: spotId, name: sp.name, rid: sp.region, cost: sp.cost, months: months };
+  }
+  function syncMonths() {
+    var m = { csa: 0, aus: 0, sea: 0 };
+    S.route.forEach(function (l) { m[l.rid] += l.months; });
+    var total = m.csa + m.aus + m.sea;
+    if (total > 0) { S.months = m; S.tripMonths = total; }
+  }
+  function save() {
+    try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {}
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      if (!raw) return;
+      var v = JSON.parse(raw);
+      Object.keys(v).forEach(function (k) { S[k] = v[k]; });
+      if (!S.route || !S.route.length) S.route = SFSPOTS.DEFAULT_ROUTE.map(function (l, i) { return mkLeg(l.spot, l.months, i); });
+      syncMonths();
+    } catch (e) {}
+  }
+
+  /* ---- formatting ------------------------------------------------------- */
+
+  function money(n, dp) {
+    if (!isFinite(n)) return '—';
+    var neg = n < 0, v = Math.abs(n);
+    return (neg ? '−$' : '$') + v.toLocaleString('en-US', { minimumFractionDigits: dp || 0, maximumFractionDigits: dp || 0 });
+  }
+  function k(n) {
+    if (!isFinite(n)) return '—';
+    var neg = n < 0, v = Math.abs(n);
+    if (v >= 1000) return (neg ? '−$' : '$') + (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k';
+    return (neg ? '−$' : '$') + Math.round(v);
+  }
+  function pct(n) { return Math.round(n * 100) + '%'; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function monthLabel(d) { return MN[d.getMonth()] + " '" + String(d.getFullYear()).slice(2); }
+  function tripDate(i) { return SF.addMonths(SF.TODAY, i); }
+
+  /* ---- render root ------------------------------------------------------ */
+
+  var R = null;   // latest model result
+
+  function recompute() { R = SF.compute(S); }
+
+  function renderAll(keepLevers) {
+    recompute();
+    document.getElementById('verdict').outerHTML = verdictPill();
+    document.querySelectorAll('.tabs button').forEach(function (b) {
+      b.setAttribute('aria-selected', String(b.dataset.tab === S.tab));
+    });
+    document.getElementById('treasure').hidden = S.tab !== 'treasure';
+    document.getElementById('adventure').hidden = S.tab !== 'adventure';
+    if (S.tab === 'treasure') renderTreasure(keepLevers); else renderAdventure();
+    save();
+  }
+
+  function verdictPill() {
+    var p = R.fundedPct, cls = p >= 0.995 ? 'go' : p >= 0.85 ? 'close' : 'no';
+    var txt = p >= 0.995 ? 'Trip funded' : p >= 0.85 ? 'Nearly there' : 'Not funded';
+    return '<span class="verdict ' + cls + '" id="verdict"><span class="dot"></span>' + txt +
+      ' · ' + pct(Math.min(p, 9.99)) + '</span>';
+  }
+
+  /* ======================================================================
+     TREASURE
+     ====================================================================== */
+
+  function renderTreasure(keepLevers) {
+    if (keepLevers) {
+      document.querySelectorAll('[data-readout]').forEach(function (n) { n.textContent = readout(n.dataset.readout); });
+    } else {
+      document.getElementById('levers').innerHTML = leversHTML();
+    }
+    document.getElementById('kpis').innerHTML = kpisHTML();
+    document.getElementById('gauge').innerHTML = gaugeHTML();
+    document.getElementById('flags').innerHTML = flagsHTML();
+    document.getElementById('traj').innerHTML = trajHTML();
+    document.getElementById('glance').innerHTML = glanceHTML();
+    document.getElementById('plan').innerHTML = planHTML();
+    document.getElementById('levrank').innerHTML = leverRankHTML();
+    document.getElementById('audit').innerHTML = auditHTML();
+    document.getElementById('ladder').innerHTML = ladderHTML();
+    document.getElementById('breakeven').innerHTML = breakEvenHTML();
+    document.getElementById('onemore').innerHTML = oneMoreHTML();
+    document.getElementById('scen').innerHTML = scenariosHTML();
+    document.getElementById('inputs').innerHTML = inputsHTML();
+    wireChart();
+  }
+
+  /* ---- levers ----------------------------------------------------------- */
+
+  var LEVERS = [
+    { id: 'monthsToDeparture', label: 'Months until departure', min: 0, max: 18, step: 1, fmt: 'mo',
+      note: 'Sets the length of the income sprint.' },
+    { id: 'tripMonths', label: 'Months abroad', min: 6, max: 30, step: 1, fmt: 'mo',
+      note: 'Route months must match. Change it on the Adventure tab to keep them in sync.' },
+    { id: 'lifestyle', label: 'Travel lifestyle', min: 0.7, max: 1.5, step: 0.05, fmt: 'x',
+      note: '0.8 lean · 1.0 base · 1.25 comfortable.' },
+    { id: 'remoteIncome', label: 'Remote income abroad', min: 0, max: 10000, step: 250, fmt: '$mo',
+      note: 'After tax. The base case has to work at $0.' },
+    { id: 'taxPct', label: 'Tax reserve on new income', min: 0.1, max: 0.5, step: 0.01, fmt: '%',
+      note: 'Applied to new gross income and, optionally, the pipeline.' },
+    { id: 'pipelinePct', label: 'Pipeline collection rate', min: 0, max: 1, step: 0.05, fmt: '%',
+      note: 'What share of the $15k pipeline actually lands.' },
+    { id: 'leucadia', label: 'Leucadia living', min: 2500, max: 8000, step: 100, fmt: '$mo',
+      note: 'Use your trailing 3-month actual, not the number you wish it were.' },
+    { id: 'landingFund', label: 'Landing fund on return', min: 0, max: 50000, step: 1000, fmt: '$',
+      note: 'Protected floor. Never spent as travel money.' },
+    { id: 'emergency', label: 'Emergency set multiplier', min: 0.5, max: 2, step: 0.05, fmt: 'x',
+      note: 'Scales every irregular reserve at once.' },
+    { id: 'charterWeeks', label: 'Boat charter weeks', min: 0, max: 8, step: 1, fmt: 'wk',
+      note: 'Mentawai or Maldives. Lands in your first boat-trip month.' },
+    { id: 'charterRate', label: 'Charter rate per week', min: 800, max: 6000, step: 100, fmt: '$',
+      note: 'Bunk on a surf charter $1.8–4.5k. Bareboat yacht runs higher.' },
+    { id: 'preIncome', label: 'Pre-departure gross income', min: 0, max: 400000, step: 5000, fmt: '$',
+      note: 'Switch off auto-solve to drive this yourself.' }
+  ];
+
+  function readout(id) {
+    var l = LEVERS.filter(function (x) { return x.id === id; })[0], v = S[id];
+    if (l.fmt === '$mo') return money(v) + '/mo';
+    if (l.fmt === '$') return money(v);
+    if (l.fmt === '%') return Math.round(v * 100) + '%';
+    if (l.fmt === 'x') return v.toFixed(2) + '×';
+    if (l.fmt === 'wk') return v + (v === 1 ? ' wk' : ' wks');
+    return v + ' mo';
+  }
+
+  function leversHTML() {
+    var h = LEVERS.map(function (l) {
+      var disabled = (l.id === 'preIncome' && S.autoSolve) || (l.id === 'tripMonths');
+      return '<div class="lever">' +
+        '<label for="lv-' + l.id + '"><span>' + esc(l.label) + '</span><b data-readout="' + l.id + '">' + readout(l.id) + '</b></label>' +
+        '<input type="range" id="lv-' + l.id + '" data-lever="' + l.id + '" min="' + l.min + '" max="' + l.max +
+        '" step="' + l.step + '" value="' + S[l.id] + '"' + (disabled ? ' disabled' : '') + '>' +
+        '<span class="note">' + esc(l.note) + '</span></div>';
+    }).join('');
+
+    var toggles = [
+      ['autoSolve', 'Auto-solve pre-departure income to the required number'],
+      ['payCard', 'Pay off the $20k business card before the 0% expires'],
+      ['doEurope', 'Keep the November Europe trip'],
+      ['charterOn', 'Include a boat charter block'],
+      ['taxPipeline', 'Reserve tax on collected pipeline too'],
+      ['scaleOneTime', 'Scale long-haul flights to trip length'],
+      ['useRouteCosts', 'Price the trip off my actual route, not regional averages'],
+      ['payLoan', 'Pay off the $18k student loan before leaving'],
+      ['liquidateStocks', 'Liquidate stocks / 401(k) — backstop, off by default'],
+      ['releaseEquity', 'Release condo equity — backstop, off by default']
+    ].map(function (t) {
+      return '<label class="switch"><input type="checkbox" data-toggle="' + t[0] + '"' + (S[t[0]] ? ' checked' : '') + '>' +
+        '<span>' + esc(t[1]) + '</span></label>';
+    }).join('');
+
+    return '<div class="levers">' + h + '</div>' +
+      '<div class="card-h" style="margin-top:22px">Switches<span class="rule"></span></div>' +
+      '<div class="levers">' + toggles + '</div>';
+  }
+
+  /* ---- KPI tiles -------------------------------------------------------- */
+
+  function kpisHTML() {
+    var tiles = [
+      { surf: 'Paddle-Out', fin: 'Required departure cash', val: money(R.required), cls: 'key',
+        sub: R.remoteTotal > 0 ? money(R.requiredAtZero) + ' if remote income is $0' : 'Trip cost + landing fund' },
+      { surf: 'Swell Fund', fin: 'Cash on departure day', val: money(R.departureCash),
+        cls: R.departureCash >= R.required ? 'good' : '', sub: 'Checking + savings + pipeline + new income − costs' },
+      { surf: 'The Gap', fin: 'Funding shortfall', val: money(Math.max(0, R.gap)),
+        cls: R.gap > 1 ? 'bad' : 'good', sub: R.gap > 1 ? 'Still to find before wheels up' : 'Funded — nothing left to find' },
+      { surf: 'The Grind', fin: 'Gross income needed before departure', val: money(R.requiredGross),
+        sub: 'Over ' + R.M + ' months, at a ' + Math.round(S.taxPct * 100) + '% tax reserve' },
+      { surf: 'Monthly Set', fin: 'Required gross income per month', val: money(R.requiredMonthlyGross),
+        cls: 'warn', sub: 'Every month between now and ' + monthLabel(R.lastGrindDate) },
+      { surf: 'Burn Rate', fin: 'Monthly burn abroad', val: money(R.burnAbroad),
+        sub: money(R.burnAllIn) + '/mo all-in with one-times and reserves' },
+      { surf: 'Return Cash', fin: 'Projected cash on return', val: money(R.endingCash),
+        cls: R.endingCash >= R.landing ? 'good' : 'bad', sub: monthLabel(R.returnDate) + ' · floor is ' + money(R.landing) },
+      { surf: 'Runway', fin: 'Months before cash hits the floor', val: R.runwayCrossed ? R.runway + ' mo' : R.T + '+ mo',
+        cls: R.runwayCrossed ? 'bad' : 'good', sub: R.runwayCrossed ? 'Dry ' + (R.T - R.runway) + (R.T - R.runway === 1 ? ' month' : ' months') + ' before the trip ends' : 'Covers the whole trip' }
+    ];
+    return tiles.map(function (t) {
+      return '<div class="kpi ' + (t.cls || '') + '"><div class="surf">' + t.surf + '</div>' +
+        '<div class="fin">' + t.fin + '</div>' +
+        '<div class="val num">' + t.val + '</div><div class="sub">' + esc(t.sub) + '</div></div>';
+    }).join('');
+  }
+
+  /* ---- gauge ------------------------------------------------------------ */
+
+  function gaugeHTML() {
+    var p = Math.max(0, Math.min(1.15, R.fundedPct));
+    var W = 250, H = 148, cx = 125, cy = 126, r = 96;
+    function pt(t) { var a = Math.PI * (1 - t); return [cx + r * Math.cos(a), cy - r * Math.sin(a)]; }
+    function arc(t0, t1, color, w, op) {
+      var a = pt(t0), b = pt(t1);
+      return '<path d="M' + a[0].toFixed(1) + ' ' + a[1].toFixed(1) + ' A' + r + ' ' + r + ' 0 0 1 ' +
+        b[0].toFixed(1) + ' ' + b[1].toFixed(1) + '" fill="none" stroke="' + color + '" stroke-width="' + w +
+        '" stroke-linecap="butt" opacity="' + (op || 1) + '"></path>';
+    }
+    var track = arc(0, 0.7, 'var(--coral)', 9, 0.22) + arc(0.705, 0.95, 'var(--amber)', 9, 0.22) + arc(0.955, 1, 'var(--mint)', 9, 0.22);
+    var col = p >= 0.995 ? 'var(--mint)' : p >= 0.85 ? 'var(--amber)' : 'var(--coral)';
+    var live = p > 0.004 ? arc(0, Math.min(p, 1), col, 9) : '';
+    var n = pt(Math.min(p, 1));
+    var needle = '<line x1="' + cx + '" y1="' + cy + '" x2="' + n[0].toFixed(1) + '" y2="' + n[1].toFixed(1) +
+      '" stroke="' + col + '" stroke-width="2"></line><circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + col + '"></circle>';
+    var ticks = [0, 0.7, 0.95, 1].map(function (t) {
+      var o = pt(t), i2 = [cx + (r - 13) * Math.cos(Math.PI * (1 - t)), cy - (r - 13) * Math.sin(Math.PI * (1 - t))];
+      return '<line x1="' + i2[0].toFixed(1) + '" y1="' + i2[1].toFixed(1) + '" x2="' + o[0].toFixed(1) + '" y2="' + o[1].toFixed(1) +
+        '" stroke="var(--line)" stroke-width="1"></line>';
+    }).join('');
+
+    var msg = p >= 0.995
+      ? 'Funded. Ending cash lands at ' + money(R.endingCash) + '.'
+      : p >= 0.85
+        ? 'Close. ' + money(R.gap) + ' short — one strong month or a small cut closes it.'
+        : 'Not funded yet. ' + money(R.gap) + ' short of the paddle-out number.';
+
+    return '<div class="gauge-wrap"><svg viewBox="0 0 ' + W + ' ' + H + '" class="chart" role="img" ' +
+      'aria-label="Funded ' + pct(R.fundedPct) + ' of required departure cash">' +
+      track + live + ticks + needle +
+      '<text x="18" y="142" fill="var(--dim)" text-anchor="start">0%</text>' +
+      '<text x="' + cx + '" y="20" fill="var(--dim)" text-anchor="middle">95%</text>' +
+      '<text x="232" y="142" fill="var(--dim)" text-anchor="end">100%</text>' +
+      '</svg><div class="gauge-read"><div class="pct" style="color:' + col + '">' + pct(Math.min(R.fundedPct, 9.99)) + '</div>' +
+      '<div class="cap">Departure cash vs required</div></div></div>' +
+      '<p class="hint">' + esc(msg) + '</p>' +
+      '<div class="kv"><div class="r"><span class="k">Departure</span><span class="fill"></span><span class="v">' + monthLabel(R.departureDate) + '</span></div>' +
+      '<div class="r"><span class="k">Home again</span><span class="fill"></span><span class="v">' + monthLabel(R.returnDate) + '</span></div>' +
+      '<div class="r"><span class="k">Sprint at $15k/mo gross</span><span class="fill"></span><span class="v">' + sprintTxt(15000) + '</span></div>' +
+      '<div class="r"><span class="k">Sprint at $25k/mo gross</span><span class="fill"></span><span class="v">' + sprintTxt(25000) + '</span></div></div>';
+  }
+
+  function sprintTxt(g) {
+    var m = R.sprintMonths(g);
+    if (!isFinite(m) || m > 120) return 'never';
+    return (m <= 0 ? '0' : m.toFixed(1)) + ' mo';
+  }
+
+  /* ---- flags ------------------------------------------------------------ */
+
+  function flagsHTML() {
+    if (!R.flags.length) return '<div class="flag info"><b>OK</b><span>Every check passes. Region months match the trip, no backstop is being counted, and cash never goes negative.</span></div>';
+    return R.flags.map(function (f) {
+      return '<div class="flag ' + f.level + '"><b>' + (f.level === 'error' ? 'Check' : f.level === 'warn' ? 'Note' : 'FYI') + '</b><span>' + esc(f.text) + '</span></div>';
+    }).join('');
+  }
+
+  /* ---- cash trajectory chart -------------------------------------------- */
+
+  function trajHTML() {
+    var pts = R.traj, W = 1000, H = 330, P = { t: 18, r: 16, b: 46, l: 62 };
+    var iw = W - P.l - P.r, ih = H - P.t - P.b;
+    var vals = pts.map(function (p) { return p.cash; }).concat([0, R.landing]);
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var pad = (hi - lo) * 0.1 || 1000; lo -= pad; hi += pad;
+    var X = function (i) { return P.l + (i / (pts.length - 1)) * iw; };
+    var Y = function (v) { return P.t + (1 - (v - lo) / (hi - lo)) * ih; };
+
+    // gridlines on round numbers the chart actually reaches
+    var step = niceStep((hi - lo) / 5), g = '';
+    for (var v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+      g += '<line x1="' + P.l + '" y1="' + Y(v).toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + Y(v).toFixed(1) +
+        '" stroke="var(--line-soft)" stroke-width="1"></line>' +
+        '<text x="' + (P.l - 9) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" fill="var(--dim)" text-anchor="end">' + k(v) + '</text>';
+    }
+
+    var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.cash).toFixed(1); }).join(' ');
+    var area = line + ' L' + X(pts.length - 1).toFixed(1) + ' ' + Y(Math.max(lo, 0)).toFixed(1) +
+      ' L' + X(0).toFixed(1) + ' ' + Y(Math.max(lo, 0)).toFixed(1) + ' Z';
+
+    // region ribbon under the plot
+    var ribbon = '';
+    pts.forEach(function (p, i) {
+      if (p.phase !== 'trip') return;
+      var c = (REG[p.region] || {}).color || 'var(--line)';
+      ribbon += '<rect x="' + (X(i) - iw / (pts.length - 1) / 2).toFixed(1) + '" y="' + (P.t + ih + 9) +
+        '" width="' + (iw / (pts.length - 1) + 0.6).toFixed(1) + '" height="6" fill="' + c + '" opacity="0.85"></rect>';
+    });
+    ribbon += '<rect x="' + X(0).toFixed(1) + '" y="' + (P.t + ih + 9) + '" width="' + (X(R.M) - X(0)).toFixed(1) +
+      '" height="6" fill="var(--gold)" opacity="0.5"></rect>';
+
+    var depX = X(R.M);
+    var marks =
+      '<line x1="' + depX.toFixed(1) + '" y1="' + P.t + '" x2="' + depX.toFixed(1) + '" y2="' + (P.t + ih) +
+      '" stroke="var(--gold)" stroke-width="1" stroke-dasharray="3 3"></line>' +
+      '<text x="' + (depX + 6).toFixed(1) + '" y="' + (P.t + 11) + '" fill="var(--gold-hi)">DEPARTURE ' + monthLabel(R.departureDate).toUpperCase() + '</text>' +
+      '<line x1="' + P.l + '" y1="' + Y(R.landing).toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + Y(R.landing).toFixed(1) +
+      '" stroke="var(--mint)" stroke-width="1" stroke-dasharray="5 4" opacity="0.75"></line>' +
+      '<text x="' + (W - P.r) + '" y="' + (Y(R.landing) - 6).toFixed(1) + '" fill="var(--mint)" text-anchor="end">LANDING FUND FLOOR ' + k(R.landing) + '</text>';
+    if (lo < 0 && hi > 0) {
+      marks += '<line x1="' + P.l + '" y1="' + Y(0).toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + Y(0).toFixed(1) +
+        '" stroke="var(--coral)" stroke-width="1" opacity="0.6"></line>';
+    }
+
+    // x labels: every 3rd month
+    var xl = '';
+    pts.forEach(function (p, i) {
+      if (i % 3) return;
+      xl += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 16) + '" fill="var(--dim)" text-anchor="middle">' + monthLabel(p.date) + '</text>';
+    });
+
+    var end = pts[pts.length - 1];
+    var endCol = end.cash >= R.landing ? 'var(--mint)' : 'var(--coral)';
+
+    return '<div class="chart-holder"><svg viewBox="0 0 ' + W + ' ' + H + '" class="chart" id="trajsvg" role="img" ' +
+      'aria-label="Cash month by month from today through the end of the trip">' +
+      '<defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="#6FE0A6" stop-opacity="0.26"></stop>' +
+      '<stop offset="100%" stop-color="#6FE0A6" stop-opacity="0.01"></stop></linearGradient></defs>' +
+      g +
+      '<path d="' + area + '" fill="url(#fill)"></path>' +
+      '<path d="' + line + '" fill="none" stroke="#6FE0A6" stroke-width="2" stroke-linejoin="round"></path>' +
+      marks + ribbon + xl +
+      '<circle cx="' + X(pts.length - 1).toFixed(1) + '" cy="' + Y(end.cash).toFixed(1) + '" r="4.5" fill="' + endCol + '" stroke="var(--ink)" stroke-width="2"></circle>' +
+      '<g id="cross" style="display:none"><line y1="' + P.t + '" y2="' + (P.t + ih) + '" stroke="var(--gold)" stroke-width="1"></line>' +
+      '<circle r="4.5" fill="var(--gold-hi)" stroke="var(--ink)" stroke-width="2"></circle></g>' +
+      '<rect id="hitzone" x="' + P.l + '" y="' + P.t + '" width="' + iw + '" height="' + (ih + 14) + '" fill="transparent"></rect>' +
+      '</svg><div class="tipbox" id="tip" hidden></div></div>' +
+      '<div class="legend" style="margin-top:12px">' +
+      '<span><i class="line-key" style="background:#6FE0A6"></i>Cash balance</span>' +
+      '<span><i class="line-key" style="background:var(--mint);opacity:.75"></i>Landing-fund floor</span>' +
+      '<span><i style="background:var(--gold);opacity:.6"></i>Pre-departure sprint</span>' +
+      Object.keys(REG).map(function (r) { return '<span><i style="background:' + REG[r].color + '"></i>' + REG[r].name + '</span>'; }).join('') +
+      '</div>';
+  }
+
+  function niceStep(raw) {
+    var p = Math.pow(10, Math.floor(Math.log10(Math.abs(raw) || 1)));
+    var n = raw / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+  }
+
+  function wireChart() {
+    var svg = document.getElementById('trajsvg');
+    if (!svg) return;
+    var tip = document.getElementById('tip'), cross = document.getElementById('cross');
+    var holder = svg.parentElement, pts = R.traj;
+    var W = 1000, P = { l: 62, r: 16, t: 18 }, iw = W - P.l - P.r;
+
+    function move(ev) {
+      var box = svg.getBoundingClientRect();
+      var cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      var cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      var vx = (cx - box.left) / box.width * W;
+      var i = Math.round((vx - P.l) / iw * (pts.length - 1));
+      i = Math.max(0, Math.min(pts.length - 1, i));
+      var p = pts[i];
+      var sx = P.l + (i / (pts.length - 1)) * iw;
+      var vals = pts.map(function (q) { return q.cash; }).concat([0, R.landing]);
+      var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+      var pad = (hi - lo) * 0.1 || 1000; lo -= pad; hi += pad;
+      var ih = 330 - P.t - 46;
+      var sy = P.t + (1 - (p.cash - lo) / (hi - lo)) * ih;
+      cross.style.display = '';
+      cross.querySelector('line').setAttribute('x1', sx); cross.querySelector('line').setAttribute('x2', sx);
+      cross.querySelector('circle').setAttribute('cx', sx); cross.querySelector('circle').setAttribute('cy', sy);
+
+      var head = p.phase === 'now' ? 'Today · ' + monthLabel(p.date)
+        : p.phase === 'pre' ? monthLabel(p.date) + ' · grind month ' + p.i
+        : monthLabel(p.date) + ' · ' + p.label + ' · trip month ' + p.tripMonth;
+      tip.innerHTML = '<div class="t">' + esc(head) + '</div>' +
+        (p.phase !== 'now' ? '<div class="l"><span>In</span><span class="pos">' + money(p.income) + '</span></div>' +
+          '<div class="l"><span>Out</span><span class="neg">' + money(p.spend) + '</span></div>' : '') +
+        '<div class="l"><span>Cash</span><span style="color:' + (p.cash >= R.landing ? 'var(--mint)' : 'var(--coral)') + '">' + money(p.cash) + '</span></div>' +
+        (p.note ? '<div style="color:var(--dim);margin-top:5px;font-size:11px">' + esc(p.note) + '</div>' : '');
+      tip.hidden = false;
+      var hb = holder.getBoundingClientRect();
+      var tw = tip.offsetWidth;
+      var left = Math.max(4, Math.min(hb.width - tw - 4, (sx / W) * hb.width - tw / 2));
+      tip.style.left = left + 'px';
+      tip.style.top = Math.max(4, (cy - hb.top) - tip.offsetHeight - 14) + 'px';
+    }
+    function out() { tip.hidden = true; cross.style.display = 'none'; }
+    svg.addEventListener('mousemove', move);
+    svg.addEventListener('mouseleave', out);
+    svg.addEventListener('touchmove', function (e) { move(e); e.preventDefault(); }, { passive: false });
+    svg.addEventListener('touchend', out);
+  }
+
+  /* ---- at a glance ------------------------------------------------------ */
+
+  function glanceHTML() {
+    function row(k2, v, cls, dim) {
+      return '<div class="r"><span class="k"' + (dim ? ' style="color:var(--dim)"' : '') + '>' + k2 + '</span><span class="fill"></span>' +
+        '<span class="v ' + (cls || '') + '">' + v + '</span></div>';
+    }
+    var h = '<div class="card-h">Paddle-out breakdown<span class="rule"></span></div><div class="kv">' +
+      row('Travel burn · ' + R.T + ' mo', money(R.travelTotal)) +
+      row('Home-break overhead', money(R.fixedTotal)) +
+      row('Flights, van, charter', money(R.oneTimeTotal)) +
+      row('Emergency set', money(R.reserveTotal)) +
+      row('Landing fund', money(R.landing)) +
+      (R.remoteTotal > 0 ? row('Less remote income', '−' + money(R.remoteTotal), 'pos') : '') +
+      '<div class="r total"><span class="k">Required</span><span class="fill"></span><span class="v">' + money(R.required) + '</span></div></div>';
+
+    h += '<div class="card-h" style="margin-top:22px">Where departure cash comes from<span class="rule"></span></div><div class="kv">' +
+      row('Checking + savings', money(R.startSpendable)) +
+      row('Pipeline after tax · ' + pct(S.pipelinePct), money(R.pipelineNet)) +
+      row('New income after tax', money(R.preIncomeUsed * (1 - S.taxPct))) +
+      (R.backstopCash ? row('Backstops released', money(R.backstopCash), 'pos') : '') +
+      row('Leucadia living · ' + R.M + ' mo', '−' + money(S.leucadia * R.M), 'neg') +
+      row('Card, taxes, Europe', '−' + money(R.preOutflows - S.leucadia * R.M), 'neg') +
+      '<div class="r total"><span class="k">On departure day</span><span class="fill"></span><span class="v">' + money(R.departureCash) + '</span></div></div>';
+
+    h += '<div class="card-h" style="margin-top:22px">Backstops · not travel cash<span class="rule"></span></div><div class="kv">' +
+      row('Stocks / 401(k)', money(S.start.stocks), S.liquidateStocks ? 'neg' : 'flat-c') +
+      row('Condo equity', money(S.start.condoEquity), S.releaseEquity ? 'neg' : 'flat-c') +
+      '</div><p class="hint" style="margin-top:8px">' +
+      (S.liquidateStocks || S.releaseEquity
+        ? 'A backstop is switched on. This plan is spending assets you said you wanted to keep.'
+        : 'Both untouched. Every number above is funded from cash and income only.') + '</p>';
+    return h;
+  }
+
+  /* ---- region plan ------------------------------------------------------ */
+
+  function planHTML() {
+    var flat = { csa: S.region.csa, aus: S.region.aus, sea: S.region.sea };
+    var rows = R.regionRows.map(function (r) {
+      var delta = r.months > 0 ? (r.burn - flat[r.id] * S.lifestyle) * r.months : 0;
+      return '<tr><td><div class="lab"><span class="swatch" style="background:' + r.color + '"></span>' + esc(r.short) + '</div></td>' +
+        '<td class="n">' + r.months + '</td>' +
+        '<td class="n">' + money(r.burn) + '</td>' +
+        '<td class="n">' + money(r.total) + '</td>' +
+        '<td class="n" style="color:' + (delta < -50 ? 'var(--mint)' : delta > 50 ? 'var(--coral)' : 'var(--dim)') + '">' +
+        (Math.abs(delta) < 50 ? '—' : (delta > 0 ? '+' : '−') + money(Math.abs(delta))) + '</td>' +
+        '<td class="n">' + pct(r.share) + '</td>' +
+        '<td style="width:120px"><div class="bar"><i style="width:' + (r.share * 100).toFixed(1) + '%;background:' + r.color + '"></i></div></td></tr>';
+    }).join('');
+    return '<div class="tbl-scroll"><table><thead><tr><th>Region</th><th>Months</th><th>Burn / mo</th><th>Total</th>' +
+      '<th>vs CSV plan</th><th>Share</th><th></th></tr></thead><tbody>' + rows +
+      '<tr class="hi"><td><b>All regions</b></td><td class="n">' + R.regionMonths + '</td>' +
+      '<td class="n">' + money(R.travelMonthlyAvg) + '</td><td class="n">' + money(R.travelTotal) + '</td>' +
+      '<td class="n"></td><td class="n">100%</td><td></td></tr></tbody></table></div>' +
+      '<p class="hint" style="margin-top:12px">' + (S.useRouteCosts
+        ? 'Priced off your actual route on the Adventure tab — each month costs what that place costs. The <strong>vs CSV plan</strong> column is the difference from the flat regional averages in your spreadsheet.'
+        : 'Priced off the flat regional averages from your CSV. Switch on <strong>price the trip off my actual route</strong> to use each destination’s real cost instead.') + '</p>';
+  }
+
+  /* ---- lever rank ------------------------------------------------------- */
+
+  function leverRankHTML() {
+    var ranked = SF.leverRank(S);
+    var max = Math.max.apply(null, ranked.map(function (x) { return Math.abs(x.saves); })) || 1;
+    return '<div class="tbl-scroll"><table><thead><tr><th>Move</th><th>Cuts the paddle-out by</th><th>New monthly target</th><th></th></tr></thead><tbody>' +
+      ranked.map(function (x, i) {
+        return '<tr' + (i < 3 ? ' class="hi"' : '') + '><td>' + esc(x.label) + '</td>' +
+          '<td class="n pos">' + money(x.saves) + '</td>' +
+          '<td class="n">' + money(x.monthly) + '/mo</td>' +
+          '<td style="width:150px"><div class="bar mint"><i style="width:' + (Math.abs(x.saves) / max * 100).toFixed(1) + '%"></i></div></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<p class="hint" style="margin-top:12px">Each row is that one change on its own, against everything else as it sits now. They stack, but not perfectly — the trip-length rows overlap with the lifestyle rows.</p>';
+  }
+
+  /* ---- overhead audit --------------------------------------------------- */
+
+  function auditHTML() {
+    var rows = R.fixedRows, max = rows[0].trip || 1;
+    var top5 = rows.slice(0, 5).reduce(function (a, b) { return a + b.trip; }, 0);
+    var body = rows.map(function (r, i) {
+      return '<tr' + (i < 5 ? ' class="hi"' : '') + '><td><div class="lab">' +
+        (i < 5 ? '<span class="tag" style="color:var(--gold-hi);border-color:var(--gold)">Cut ' + (i + 1) + '</span>' : '') +
+        esc(r.label) + (r.added ? ' <span class="tag added">Added</span>' : '') +
+        (r.conf === 'INPUT NEEDED' ? ' <span class="tag need">Input needed</span>' : '') + '</div></td>' +
+        '<td class="n" style="color:var(--dim)">' + esc(r.group) + '</td>' +
+        '<td><input type="number" data-fixed="' + r.id + '" value="' + r.monthly + '" step="5" min="0" style="width:88px"></td>' +
+        '<td class="n">' + money(r.trip) + '</td>' +
+        '<td style="width:150px"><div class="bar"><i style="width:' + (r.trip / max * 100).toFixed(1) + '%"></i></div></td></tr>';
+    }).join('');
+    return '<div class="tbl-scroll"><table><thead><tr><th>Line</th><th>Group</th><th>Per month</th><th>Over ' + R.T + ' months</th><th></th></tr></thead><tbody>' +
+      body + '<tr><td><b>Total home-break overhead</b></td><td></td><td class="n"><b>' + money(R.fixedMonthly) + '</b></td>' +
+      '<td class="n"><b>' + money(R.fixedTotal) + '</b></td><td></td></tr></tbody></table></div>' +
+      '<p class="hint" style="margin-top:12px">The top five alone cost <strong>' + money(top5) + '</strong> over the trip — ' +
+      pct(top5 / (R.fixedTotal || 1)) + ' of all fixed overhead, and ' + pct(top5 / (R.required || 1)) + ' of the entire paddle-out number. ' +
+      'Three of these lines are the condo; killing storage and the vehicle is the fastest clean cut. Edit any number here and every figure on the page moves.</p>';
+  }
+
+  /* ---- remote income ladder --------------------------------------------- */
+
+  function ladderHTML() {
+    var steps = [0, 1000, 2000, 3000, 5000, 10000];
+    var names = ['Flat day', 'Moonlight', "Swami's", 'Pipes', 'Trestles', 'Cortes Bank'];
+    var cur = S.remoteIncome;
+    var rows = steps.map(function (v, i) {
+      var x = SF.runScenario(S, { remoteIncome: v });
+      var on = (i === steps.length - 1 ? cur >= v : cur >= v && cur < steps[i + 1]);
+      return '<div class="row' + (on ? ' on' : '') + '"><span class="name">' + names[i] + '</span>' +
+        '<span class="rng">' + money(v) + '/MO</span>' +
+        '<span class="amt">' + money(x.required) + '</span></div>';
+    }).join('');
+    var two = SF.runScenario(S, { remoteIncome: 2000 });
+    return '<div class="ladder">' + rows + '</div>' +
+      '<p class="hint" style="margin-top:14px">Required departure cash at each level of remote income. Every $1,000/month of recurring revenue takes <strong>' +
+      money(R.T * 1000) + '</strong> off the number you have to save before you leave. At $2,000/month the monthly grind target drops from <strong>' +
+      money(R.requiredMonthlyGross) + '</strong> to <strong>' + money(two.requiredMonthlyGross) + '</strong>.</p>';
+  }
+
+  /* ---- break-even ------------------------------------------------------- */
+
+  function breakEvenHTML() {
+    var rows = [[0.25, 'Quarter of burn'], [0.5, 'Half of burn'], [0.75, 'Three quarters'], [1, 'Full break-even']].map(function (p) {
+      var v = R.burnAbroad * p[0];
+      return '<div class="r"><span class="k">' + p[1] + '</span><span class="fill"></span>' +
+        '<span class="v' + (S.remoteIncome >= v ? ' pos' : '') + '">' + money(v) + '/mo</span></div>';
+    }).join('');
+    return '<div class="kv">' + rows +
+      '<div class="r total"><span class="k">All-in break-even</span><span class="fill"></span><span class="v">' + money(R.breakEvenAllIn) + '/mo</span></div></div>' +
+      '<p class="hint" style="margin-top:12px">Break-even is the point where cash stops falling while you are abroad. <strong>' +
+      money(R.burnAbroad) + '/mo</strong> covers the recurring burn — travel plus home-break overhead. <strong>' + money(R.breakEvenAllIn) +
+      '/mo</strong> also covers flights, the van, the charter and the reserves, which is the honest number: hit it and the trip pays for itself indefinitely.</p>';
+  }
+
+  /* ---- one more month --------------------------------------------------- */
+
+  function oneMoreHTML() {
+    var net = R.oneMoreMonth;
+    var extra = SF.runScenario(S, { monthsToDeparture: S.monthsToDeparture + 1 });
+    return '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">' +
+      '<div class="num" style="font-size:36px;color:' + (net > 0 ? 'var(--mint)' : 'var(--coral)') + '">' + money(net) + '</div>' +
+      '<div class="hint" style="max-width:260px">net added to the trip fund by one more month of grinding</div></div>' +
+      '<div class="kv" style="margin-top:12px">' +
+      '<div class="r"><span class="k">Gross earned</span><span class="fill"></span><span class="v">' + money(R.expectedMonthlyGross) + '</span></div>' +
+      '<div class="r"><span class="k">Less tax reserve · ' + Math.round(S.taxPct * 100) + '%</span><span class="fill"></span><span class="v neg">−' + money(R.expectedMonthlyGross * S.taxPct) + '</span></div>' +
+      '<div class="r"><span class="k">Less Leucadia living</span><span class="fill"></span><span class="v neg">−' + money(S.leucadia) + '</span></div>' +
+      '<div class="r total"><span class="k">Net per extra month</span><span class="fill"></span><span class="v ' + (net > 0 ? 'pos' : 'neg') + '">' + money(net) + '</span></div></div>' +
+      '<p class="hint" style="margin-top:12px">Staying a seventh month drops the required monthly target to <strong>' +
+      money(extra.requiredMonthlyGross) + '</strong>. Below <strong>' + money(S.leucadia / (1 - S.taxPct)) +
+      '</strong> gross a month you are going backwards — an extra month costs more in Leucadia rent than it brings in.</p>';
+  }
+
+  /* ---- scenarios -------------------------------------------------------- */
+
+  function scenariosHTML() {
+    var list = SF.SCENARIOS.map(function (sc) { return { name: sc.name, sub: sc.sub, r: SF.runScenario(S, sc.patch) }; });
+    list.push({ name: 'Your dials', sub: 'Whatever the controls say right now', r: R, cur: true });
+    var rows = list.map(function (x) {
+      var r = x.r;
+      return '<tr' + (x.cur ? ' class="hi"' : '') + '><td><div class="lab"><div><b style="font-family:var(--serif);font-size:17px">' + esc(x.name) +
+        '</b><div style="font-size:11px;color:var(--dim)">' + esc(x.sub) + '</div></div></div></td>' +
+        '<td class="n">' + money(r.required) + '</td>' +
+        '<td class="n">' + money(r.requiredGross) + '</td>' +
+        '<td class="n" style="color:var(--gold-hi)">' + money(r.requiredMonthlyGross) + '</td>' +
+        '<td class="n">' + money(r.tripCost) + '</td>' +
+        '<td class="n pos">' + money(r.endingCash) + '</td>' +
+        '<td>' + yn(r.touchesInvestments) + '</td><td>' + yn(r.touchesEquity) + '</td></tr>';
+    }).join('');
+    return '<div class="tbl-scroll"><table><thead><tr><th>Scenario</th><th>Required departure cash</th><th>Gross before departure</th>' +
+      '<th>Per month</th><th>Total trip cost</th><th>Ending cash</th><th>Investments?</th><th>Condo equity?</th></tr></thead><tbody>' +
+      rows + '</tbody></table></div>' +
+      '<p class="hint" style="margin-top:12px">Every scenario auto-solves the pre-departure income so the trip ends exactly on the landing fund. Investments and condo equity stay untouched in all of them unless you switch a backstop on.</p>';
+  }
+  function yn(b) {
+    return b ? '<span class="tag need">Yes</span>' : '<span class="tag" style="color:var(--mint);border-color:rgba(111,224,166,.4)">No</span>';
+  }
+
+  /* ---- editable inputs / audit trail ------------------------------------ */
+
+  function inputsHTML() {
+    function numCell(group, id, val, step) {
+      return '<input type="number" data-' + group + '="' + id + '" value="' + val + '" step="' + (step || 100) + '" style="width:110px">';
+    }
+    function tbl(head, rows) {
+      return '<div class="tbl-scroll"><table><thead><tr>' + head.map(function (h) { return '<th>' + h + '</th>'; }).join('') +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+
+    var startRows = SF.START.map(function (r) {
+      return '<tr><td>' + esc(r.label) + (r.spend === false ? ' <span class="tag">Backstop</span>' : '') + '</td>' +
+        '<td>' + numCell('start', r.id, S.start[r.id], 500) + '</td>' +
+        '<td class="n" style="color:var(--dim)">' + r.conf + '</td>' +
+        '<td style="text-align:left;color:var(--dim);font-size:11.5px">' + esc(r.note) + '</td></tr>';
+    }).join('');
+
+    var preRows = SF.PRE.map(function (r) {
+      return '<tr><td>' + esc(r.label) + '</td><td>' + numCell('pre', r.id, S.pre[r.id], 500) + '</td>' +
+        '<td class="n" style="color:var(--dim)">' + r.conf + '</td>' +
+        '<td style="text-align:left;color:var(--dim);font-size:11.5px">' + esc(r.note) + '</td></tr>';
+    }).join('');
+
+    var regionRows = SF.REGIONS.map(function (r) {
+      return '<tr><td><div class="lab"><span class="swatch" style="background:' + r.color + '"></span>' + esc(r.label) + '</div></td>' +
+        '<td>' + numCell('region', r.id, S.region[r.id], 100) + '</td>' +
+        '<td class="n">' + S.months[r.id] + ' mo</td>' +
+        '<td style="text-align:left;color:var(--dim);font-size:11.5px">' + esc(r.note) + '</td></tr>';
+    }).join('');
+
+    var oneRows = R.oneRows.map(function (r) {
+      var editable = r.id !== 'charter';
+      return '<tr><td>' + esc(r.label) + (r.added ? ' <span class="tag added">Added</span>' : '') + '</td>' +
+        '<td>' + (editable ? numCell('onetime', r.id, S.onetime[r.id], 250) : '<span class="num">' + money(r.amount) + '</span>') + '</td>' +
+        '<td class="n">' + money(r.amount) + '</td>' +
+        '<td style="text-align:left;color:var(--dim);font-size:11.5px">' + esc(r.note) + '</td></tr>';
+    }).join('');
+
+    var resRows = R.reserveRows.map(function (r) {
+      return '<tr><td>' + esc(r.label) + '</td><td>' + numCell('reserve', r.id, S.reserve[r.id], 250) + '</td>' +
+        '<td class="n">' + money(r.amount) + '</td>' +
+        '<td style="text-align:left;color:var(--dim);font-size:11.5px">' + esc(r.note) + '</td></tr>';
+    }).join('');
+
+    var formula =
+      '<div class="formula">' +
+      '<b>Trip cost</b> <span class="op">=</span> travel burn <span class="op">+</span> home-break overhead × months <span class="op">+</span> one-time travel <span class="op">+</span> reserves × emergency multiplier<br>' +
+      '<b>Paddle-out number</b> <span class="op">=</span> trip cost <span class="op">+</span> landing fund <span class="op">−</span> remote income × months abroad<br>' +
+      '<b>Departure cash</b> <span class="op">=</span> checking <span class="op">+</span> savings <span class="op">+</span> pipeline × collection × (1 − tax) <span class="op">+</span> new gross × (1 − tax) <span class="op">−</span> Leucadia × months <span class="op">−</span> Europe <span class="op">−</span> 2026 tax bill <span class="op">−</span> card payoff<br>' +
+      '<b>Required gross</b> <span class="op">=</span> (paddle-out <span class="op">+</span> pre-departure outflows <span class="op">−</span> starting cash <span class="op">−</span> pipeline net) <span class="op">÷</span> (1 − tax)<br>' +
+      '<b>Ending cash</b> <span class="op">=</span> departure cash <span class="op">−</span> trip cost <span class="op">+</span> remote income × months abroad<br>' +
+      '<b>Break-even</b> <span class="op">=</span> average travel burn <span class="op">+</span> home-break overhead<br>' +
+      '<b>One more month</b> <span class="op">=</span> monthly gross × (1 − tax) <span class="op">−</span> Leucadia living' +
+      '</div>' +
+      '<p class="hint" style="margin-top:14px"><strong>Rules this model keeps.</strong> Stocks and condo equity are never spendable unless their toggle is on. ' +
+      'The student-loan balance is never an expense — only the monthly payment is, unless payoff is switched on. The landing fund is a floor, not a budget. ' +
+      'Balances and cash flows are kept apart. Nothing is counted twice: the long-haul flight line is continent jumps only, the in-region line is everything shorter, ' +
+      'and regional burn already contains housing, food and local transport.</p>';
+
+    return '<details open><summary>Starting position</summary><div class="details-body">' +
+      tbl(['Item', 'Amount', 'Confidence', 'Note'], startRows) + '</div></details>' +
+      '<details><summary>Pre-departure one-time events</summary><div class="details-body">' +
+      tbl(['Item', 'Amount', 'Confidence', 'Note'], preRows) + '</div></details>' +
+      '<details><summary>Regional burn · CSV planning averages</summary><div class="details-body">' +
+      tbl(['Region', 'Per month', 'Months', 'Note'], regionRows) + '</div></details>' +
+      '<details><summary>One-time trip costs</summary><div class="details-body">' +
+      tbl(['Item', 'Input', 'Applied', 'Note'], oneRows) + '</div></details>' +
+      '<details><summary>Emergency set · irregular reserves</summary><div class="details-body">' +
+      tbl(['Item', 'Input', 'After ' + S.emergency.toFixed(2) + '× multiplier', 'Note'], resRows) + '</div></details>' +
+      '<details><summary>The math, in full</summary><div class="details-body">' + formula + '</div></details>';
+  }
+
+  /* ======================================================================
+     ADVENTURE
+     ====================================================================== */
+
+  function renderAdventure() {
+    document.getElementById('ocean').innerHTML = oceanHTML();
+    document.getElementById('monthchips').innerHTML = monthChipsHTML();
+    document.getElementById('course').innerHTML = courseHTML();
+    document.getElementById('coursefoot').innerHTML = courseFootHTML();
+    document.getElementById('library').innerHTML = libraryHTML();
+    document.getElementById('regionchips').innerHTML = regionChipsHTML();
+    document.getElementById('logistics').innerHTML = logisticsHTML();
+    document.getElementById('workblocks').innerHTML = workHTML();
+  }
+
+  /* Pacific-centred equirectangular: Asia left, the Americas right, the whole
+     surf belt in one uninterrupted band. */
+  var OW = 1000, OH = 420;
+  function px(lng) { return ((lng - 60 + 360) % 360) / 360 * OW; }
+  function py(lat) { return (42 - lat) / 88 * OH; }
+
+  function oceanHTML() {
+    var g = '';
+    [[0, 'EQUATOR'], [23.4, 'TROPIC OF CANCER'], [-23.4, 'TROPIC OF CAPRICORN']].forEach(function (l) {
+      var y = py(l[0]);
+      g += '<line x1="0" y1="' + y.toFixed(1) + '" x2="' + OW + '" y2="' + y.toFixed(1) +
+        '" stroke="rgba(255,255,255,.16)" stroke-width="1" stroke-dasharray="' + (l[0] === 0 ? '0' : '4 6') + '"></line>' +
+        '<text x="8" y="' + (y - 5).toFixed(1) + '" fill="rgba(255,255,255,.42)" font-size="9" letter-spacing="1.6">' + l[1] + '</text>';
+    });
+    for (var lo = 60; lo < 420; lo += 30) {
+      var x = px(lo > 180 ? lo - 360 : lo);
+      if (x < 2 || x > OW - 2) continue;
+      g += '<line x1="' + x.toFixed(1) + '" y1="0" x2="' + x.toFixed(1) + '" y2="' + OH + '" stroke="rgba(255,255,255,.07)" stroke-width="1"></line>';
+    }
+    ['ASIA & THE INDIAN OCEAN|110', 'OCEANIA|168', 'THE PACIFIC|-150', 'THE AMERICAS|-80'].forEach(function (s) {
+      var p = s.split('|');
+      g += '<text x="' + px(+p[1]).toFixed(1) + '" y="26" fill="rgba(255,255,255,.34)" font-size="10" letter-spacing="3" text-anchor="middle">' + p[0] + '</text>';
+    });
+
+    // home break
+    var hx = px(-117.3), hy = py(33.0);
+    g += '<g><circle cx="' + hx.toFixed(1) + '" cy="' + hy.toFixed(1) + '" r="5" fill="none" stroke="#EFC46B" stroke-width="1.5"></circle>' +
+      '<circle cx="' + hx.toFixed(1) + '" cy="' + hy.toFixed(1) + '" r="2" fill="#EFC46B"></circle>' +
+      '<text x="' + (hx + 10).toFixed(1) + '" y="' + (hy + 3).toFixed(1) + '" fill="#EFC46B" font-size="9.5" letter-spacing="1.4">HOME BREAK</text></g>';
+
+    // the course: dotted rhumb lines between consecutive legs
+    var path = '';
+    var stops = S.route.map(function (l) { return byId[l.spot]; }).filter(Boolean);
+    if (stops.length) {
+      var d = 'M' + hx.toFixed(1) + ' ' + hy.toFixed(1);
+      stops.forEach(function (sp) { d += ' L' + px(sp.lng).toFixed(1) + ' ' + py(sp.lat).toFixed(1); });
+      path = '<path d="' + d + '" fill="none" stroke="rgba(239,196,107,.55)" stroke-width="1.5" stroke-dasharray="2 6" stroke-linecap="round"></path>';
+    }
+
+    var inRoute = {}; S.route.forEach(function (l) { inRoute[l.spot] = true; });
+    var dots = SPOTS.filter(visible).map(function (sp) {
+      var x = px(sp.lng), y = py(sp.lat), c = REG[sp.region].color, on = inRoute[sp.id];
+      return '<g class="spot-dot' + (on ? ' sel' : '') + '" data-spot="' + sp.id + '" tabindex="0" role="button" aria-label="' + esc(sp.name) + ', ' + money(sp.cost) + ' a month">' +
+        '<circle class="hit" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="15"></circle>' +
+        (on ? '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="11" fill="' + c + '" opacity="0.2"></circle>' : '') +
+        '<circle class="core" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (on ? 6 : 4.5) + '" fill="' + c + '" stroke="rgba(5,12,21,.8)" stroke-width="1"></circle>' +
+        '<title>' + esc(sp.name + ' · ' + sp.country + ' · ' + money(sp.cost) + '/mo · ' + sp.peak) + '</title></g>';
+    }).join('');
+
+    // Label only the places on the course, nudged apart so none collide.
+    var placed = [];
+    var labels = SPOTS.filter(function (sp) { return visible(sp) && inRoute[sp.id]; })
+      .map(function (sp) { return { sp: sp, x: px(sp.lng), y: py(sp.lat) }; })
+      .sort(function (a, b) { return a.y - b.y; })
+      .map(function (o) {
+        var ly = o.y;
+        placed.forEach(function (q) { if (Math.abs(q.x - o.x) < 150 && ly - q.ly < 14) ly = q.ly + 14; });
+        placed.push({ x: o.x, ly: ly });
+        var right = o.x < OW - 150;
+        var tx = right ? o.x + 11 : o.x - 11;
+        var tick = Math.abs(ly - o.y) > 2
+          ? '<line x1="' + o.x.toFixed(1) + '" y1="' + o.y.toFixed(1) + '" x2="' + tx.toFixed(1) + '" y2="' + (ly - 3).toFixed(1) +
+            '" stroke="rgba(255,255,255,.3)" stroke-width="1"></line>' : '';
+        return tick + '<text x="' + tx.toFixed(1) + '" y="' + (ly + 3.5).toFixed(1) +
+          '" fill="rgba(255,255,255,.88)" font-size="10" letter-spacing="0.6" text-anchor="' +
+          (right ? 'start' : 'end') + '">' + esc(o.sp.name) + '</text>';
+      }).join('');
+
+    return '<div class="ocean"><svg viewBox="0 0 ' + OW + ' ' + OH + '" role="img" aria-label="World surf chart, Pacific centred">' +
+      g + path + dots + labels + '</svg></div>';
+  }
+
+  function visible(sp) {
+    if (S.regionFilter !== 'all' && sp.region !== S.regionFilter) return false;
+    if (S.monthFilter && sp.season.indexOf(S.monthFilter) === -1) return false;
+    return true;
+  }
+
+  function monthChipsHTML() {
+    var h = '<button class="chip" data-month="0" aria-pressed="' + (S.monthFilter === 0) + '">Any month</button>';
+    for (var i = 1; i <= 12; i++) h += '<button class="chip" data-month="' + i + '" aria-pressed="' + (S.monthFilter === i) + '">' + MN[i - 1] + '</button>';
+    return h;
+  }
+  function regionChipsHTML() {
+    var h = '<button class="chip" data-region="all" aria-pressed="' + (S.regionFilter === 'all') + '">All regions</button>';
+    Object.keys(REG).forEach(function (r) {
+      h += '<button class="chip" data-region="' + r + '" aria-pressed="' + (S.regionFilter === r) + '">' + REG[r].name + '</button>';
+    });
+    return h;
+  }
+
+  /* ---- the course ------------------------------------------------------- */
+
+  function legMonths() {
+    var out = [], m = S.monthsToDeparture + 1;
+    S.route.forEach(function (l) { out.push({ leg: l, start: m, end: m + l.months - 1 }); m += l.months; });
+    return out;
+  }
+
+  function seasonFit(leg, start, months) {
+    var hit = 0, sp = byId[leg.spot];
+    for (var i = 0; i < months; i++) {
+      var d = tripDate(start + i);
+      if (sp.season.indexOf(d.getMonth() + 1) !== -1) hit++;
+    }
+    return months ? hit / months : 0;
+  }
+
+  function courseHTML() {
+    var spans = legMonths();
+    if (!spans.length) return '<p class="hint">No legs yet. Add a destination from the chart or the library below.</p>';
+    return spans.map(function (sp2, i) {
+      var l = sp2.leg, spot = byId[l.spot], f = seasonFit(l, sp2.start, l.months);
+      var cls = f >= 0.99 ? 'on' : f >= 0.5 ? 'mid' : 'off';
+      var txt = f >= 0.99 ? 'In season' : f > 0 ? Math.round(f * l.months) + ' of ' + l.months + ' in season' : 'Off season';
+      return '<div class="leg" style="--rc:' + REG[l.rid].color + '">' +
+        '<span class="idx num">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<span class="who"><b>' + esc(spot.name) + '</b><span>' + esc(spot.country) + ' · ' + esc(spot.peak) + '</span></span>' +
+        '<span class="when">' + monthLabel(tripDate(sp2.start)) + ' – ' + monthLabel(tripDate(sp2.end)) + '</span>' +
+        '<span class="mo"><button data-legdec="' + l.key + '" aria-label="One month less">−</button>' +
+        '<b class="num">' + l.months + '</b>' +
+        '<button data-leginc="' + l.key + '" aria-label="One month more">+</button></span>' +
+        '<span class="cost num">' + money(spot.cost * l.months * S.lifestyle) + '</span>' +
+        '<span class="acts"><span class="fit ' + cls + '">' + txt + '</span>' +
+        '<button class="chip" data-legup="' + l.key + '" aria-label="Move earlier">↑</button>' +
+        '<button class="chip" data-legdown="' + l.key + '" aria-label="Move later">↓</button>' +
+        '<button class="chip" data-legdel="' + l.key + '" aria-label="Remove leg">✕</button></span></div>';
+    }).join('');
+  }
+
+  function courseFootHTML() {
+    var spans = legMonths();
+    var off = spans.filter(function (s2) { return seasonFit(s2.leg, s2.start, s2.leg.months) < 0.99; });
+    var byRegion = { csa: 0, aus: 0, sea: 0 };
+    S.route.forEach(function (l) { byRegion[l.rid] += l.months; });
+    var total = byRegion.csa + byRegion.aus + byRegion.sea;
+    var pills = Object.keys(REG).map(function (r) {
+      return '<span class="fit" style="color:' + REG[r].color + ';background:rgba(255,255,255,.04)">' + REG[r].name + ' ' + byRegion[r] + ' mo</span>';
+    }).join(' ');
+    return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">' + pills +
+      '<span class="fit" style="color:var(--gold-hi);background:var(--gold-dim)">' + total + ' months total</span>' +
+      '<span class="fit" style="color:var(--mint);background:rgba(111,224,166,.10)">' + money(R.travelTotal) + ' travel burn</span></div>' +
+      '<p class="hint">' + (off.length === 0
+        ? 'Every leg lands inside its own season. Reorder or restretch and this line will tell you the moment that stops being true.'
+        : off.length + ' leg' + (off.length > 1 ? 's' : '') + ' sit partly outside season: <strong>' +
+          off.map(function (s2) { return esc(byId[s2.leg.spot].name); }).join(', ') +
+          '</strong>. Move them up or down the list, or trade months with a neighbour.') +
+      ' Changing the course rewrites the region months, the trip length and the burn on the Treasure tab.</p>';
+  }
+
+  /* ---- library ---------------------------------------------------------- */
+
+  function libraryHTML() {
+    var list = SPOTS.filter(visible);
+    if (!list.length) return '<p class="hint">Nothing works in that month in that region. Try another filter.</p>';
+    return list.map(function (sp) {
+      var strip = '';
+      for (var i = 1; i <= 12; i++) {
+        strip += '<i class="' + (sp.season.indexOf(i) !== -1 ? 'on' : '') + (S.monthFilter === i ? ' now' : '') + '"></i>';
+      }
+      return '<div class="spot" style="--rc:' + REG[sp.region].color + '">' +
+        '<h4>' + esc(sp.name) + '</h4>' +
+        '<div class="meta"><span>' + esc(sp.country) + '</span><span>·</span><span>' + esc(sp.level) + '</span><span>·</span>' +
+        '<span>wifi <span class="dots">' + [1, 2, 3, 4, 5].map(function (n) { return '<i class="' + (n <= sp.wifi ? 'on' : '') + '"></i>'; }).join('') + '</span></span></div>' +
+        '<div class="season-strip" aria-label="Season by month">' + strip + '</div>' +
+        '<div class="meta"><span>' + esc(sp.peak) + '</span></div>' +
+        '<p class="desc">' + esc(sp.wave) + '</p>' +
+        '<div class="facts"><div><b>Visa</b> ' + esc(sp.visa) + '</div><div><b>Getting in</b> ' + esc(sp.board) + '</div></div>' +
+        '<p class="watch">' + esc(sp.watch) + '</p>' +
+        '<div class="foot"><span class="price num">' + money(sp.cost) + '<small>/mo</small></span>' +
+        '<button class="add" data-add="' + sp.id + '">Add to course</button></div></div>';
+    }).join('');
+  }
+
+  /* ---- logistics -------------------------------------------------------- */
+
+  function logisticsHTML() {
+    var spans = legMonths();
+    if (!spans.length) return '<p class="hint">Add legs to see the hops between them.</p>';
+    var rows = '', prev = null, prevName = 'San Diego';
+    spans.forEach(function (s2) {
+      var sp = byId[s2.leg.spot];
+      var jump = prev ? haversine(prev.lat, prev.lng, sp.lat, sp.lng) : haversine(33.0, -117.3, sp.lat, sp.lng);
+      var changed = !prev || prev.region !== sp.region;
+      var est = changed ? Math.round((800 + jump * 0.09) / 50) * 50 : Math.round((90 + jump * 0.05) / 10) * 10;
+      rows += '<tr><td><div class="lab"><span class="swatch" style="background:' + REG[sp.region].color + '"></span>' +
+        esc(prevName) + ' → ' + esc(sp.name) + '</div></td>' +
+        '<td class="n">' + Math.round(jump).toLocaleString('en-US') + ' km</td>' +
+        '<td>' + (changed ? '<span class="tag" style="color:var(--gold-hi);border-color:var(--gold)">Long-haul</span>' : '<span class="tag">Regional hop</span>') + '</td>' +
+        '<td class="n">' + money(est) + '</td>' +
+        '<td style="text-align:left;color:var(--dim);font-size:11.5px">' + esc(sp.board) + '</td></tr>';
+      prev = sp; prevName = sp.name;
+    });
+    var last = byId[spans[spans.length - 1].leg.spot];
+    var home = haversine(last.lat, last.lng, 33.0, -117.3);
+    rows += '<tr><td><div class="lab"><span class="swatch" style="background:var(--gold)"></span>' + esc(last.name) + ' → San Diego</div></td>' +
+      '<td class="n">' + Math.round(home).toLocaleString('en-US') + ' km</td>' +
+      '<td><span class="tag" style="color:var(--gold-hi);border-color:var(--gold)">Long-haul</span></td>' +
+      '<td class="n">' + money(Math.round((800 + home * 0.09) / 50) * 50) + '</td>' +
+      '<td style="text-align:left;color:var(--dim);font-size:11.5px">Coming home with the quiver. Budget two extra bags.</td></tr>';
+
+    return '<div class="tbl-scroll"><table><thead><tr><th>Leg</th><th>Distance</th><th>Type</th><th>Rough airfare + board bags</th><th>Notes</th></tr></thead><tbody>' +
+      rows + '</tbody></table></div>' +
+      '<p class="hint" style="margin-top:12px">Distances are great-circle, so treat the fares as order-of-magnitude, not quotes. The model funds long-hauls from the <strong>' +
+      money(R.oneRows[0].amount) + '</strong> repositioning budget and regional hops from the <strong>' + money(S.fixed.hops) +
+      '/mo</strong> line — if the fares above add up to more than that, raise one of them on the Treasure tab.</p>';
+  }
+
+  function haversine(a1, o1, a2, o2) {
+    var toR = Math.PI / 180, R2 = 6371;
+    var dLat = (a2 - a1) * toR, dLon = (o2 - o1) * toR;
+    var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(a1 * toR) * Math.cos(a2 * toR) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return 2 * R2 * Math.asin(Math.min(1, Math.sqrt(x)));
+  }
+
+  /* ---- work blocks ------------------------------------------------------ */
+
+  function overlap(utc) {
+    // San Diego workday 08:00–17:00 PDT (UTC−7); count hours that land between
+    // 07:00 and 22:00 local at the destination.
+    var delta = utc + 7, hrs = 0, first = null, last = null;
+    for (var h = 8; h < 17; h++) {
+      var loc = ((h + delta) % 24 + 24) % 24;
+      if (loc >= 7 && loc < 22) { hrs++; if (first === null) first = loc; last = loc; }
+    }
+    return { hrs: hrs, first: first, last: last };
+  }
+  function hh(x) { var h = Math.floor(x), m = Math.round((x - h) * 60); return (h % 24) + ':' + String(m).padStart(2, '0'); }
+
+  function workHTML() {
+    var spans = legMonths();
+    if (!spans.length) return '<p class="hint">Add legs to plan the work around them.</p>';
+    var opts = PROJECTS.map(function (p) { return p; });
+    return spans.map(function (s2) {
+      var sp = byId[s2.leg.spot], o = overlap(sp.utc);
+      var suggested = sp.wifi >= 4 ? (o.hrs >= 4 ? 'p4' : 'p1') : sp.wifi >= 3 ? 'p3' : 'p6';
+      var chosen = S.assign[s2.leg.key] || suggested;
+      var fit = sp.wifi >= 4 ? 'on' : sp.wifi >= 3 ? 'mid' : 'off';
+      var fitTxt = sp.wifi >= 4 ? 'Client-ready' : sp.wifi >= 3 ? 'Async only' : 'Offline work';
+      return '<div class="work-row" style="--rc:' + REG[sp.region].color + '">' +
+        '<div><div class="p">' + esc(sp.name) + '</div><div class="s">' + monthLabel(tripDate(s2.start)) + ' – ' + monthLabel(tripDate(s2.end)) + ' · ' + s2.leg.months + ' mo</div></div>' +
+        '<span class="fit ' + fit + '">' + fitTxt + '</span>' +
+        '<div><div class="s">San Diego overlap</div><div class="num" style="font-size:13px;color:' + (o.hrs >= 4 ? 'var(--mint)' : o.hrs >= 2 ? 'var(--amber)' : 'var(--coral)') + '">' +
+        (o.hrs ? o.hrs + ' hrs · ' + hh(o.first) + '–' + hh(o.last + 1) + ' local' : 'none') + '</div></div>' +
+        '<select data-assign="' + s2.leg.key + '">' +
+        opts.map(function (p) {
+          return '<option value="' + p.id + '"' + (p.id === chosen ? ' selected' : '') + (p.need > sp.wifi ? ' data-warn="1"' : '') + '>' +
+            esc(p.name) + (p.need > sp.wifi ? ' — needs better wifi' : '') + '</option>';
+        }).join('') + '</select></div>';
+    }).join('') +
+      '<p class="hint" style="margin-top:14px">Overlap is how many hours of a San Diego 8-to-5 land inside a workable local day. Australia and SE Asia give you an evening call window at best, so anything that needs live calls belongs in the Americas legs — or in the pre-departure sprint. ' +
+      'The fastest wifi on the route is Bali, the Gold Coast and Sydney; Gnaraloo and the Mentawais have none, which makes them the right months for deep build work and the wrong months for a launch.</p>';
+  }
+
+  /* ======================================================================
+     EVENTS
+     ====================================================================== */
+
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.dataset.lever) {
+      var id = t.dataset.lever, v = parseFloat(t.value);
+      S[id] = v;
+      if (id === 'charterWeeks' || id === 'charterRate') S.charterOn = S.charterWeeks > 0;
+      renderAll(true);
+    }
+  });
+
+  document.addEventListener('change', function (e) {
+    var t = e.target, g;
+    if (t.dataset.toggle) { S[t.dataset.toggle] = t.checked; return renderAll(); }
+    ['fixed', 'start', 'pre', 'region', 'onetime', 'reserve'].forEach(function (grp) {
+      if (t.dataset[grp] !== undefined) { g = true; S[grp][t.dataset[grp]] = parseFloat(t.value) || 0; }
+    });
+    if (g) return renderAll();
+    if (t.dataset.assign) { S.assign[t.dataset.assign] = t.value; save(); }
+  });
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-tab],[data-month],[data-region],[data-add],[data-legup],[data-legdown],[data-legdel],[data-leginc],[data-legdec],[data-spot],[data-reset]');
+    if (!t) return;
+    var d = t.dataset;
+    if (d.tab) { S.tab = d.tab; return renderAll(); }
+    if (d.reset !== undefined) {
+      if (!confirm('Reset every number and the whole course back to the CSV defaults?')) return;
+      try { localStorage.removeItem(STORE); } catch (err) {}
+      var keep = S.tab;
+      S = SF.clone(SF.DEFAULTS);
+      S.route = SFSPOTS.DEFAULT_ROUTE.map(function (l, i) { return mkLeg(l.spot, l.months, i); });
+      S.tab = keep; S.monthFilter = 0; S.regionFilter = 'all'; S.assign = {};
+      syncMonths(); return renderAll();
+    }
+    if (d.month !== undefined) { S.monthFilter = +d.month; return renderAll(); }
+    if (d.region) { S.regionFilter = d.region; return renderAll(); }
+    if (d.add || d.spot) {
+      var sid = d.add || d.spot;
+      S.route.push(mkLeg(sid, 2, S.route.length));
+      syncMonths(); renderAll();
+      if (d.spot) document.getElementById('course-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    var i = idx(d.legup || d.legdown || d.legdel || d.leginc || d.legdec);
+    if (i < 0) return;
+    if (d.legup && i > 0) { var a = S.route.splice(i, 1)[0]; S.route.splice(i - 1, 0, a); }
+    if (d.legdown && i < S.route.length - 1) { var b = S.route.splice(i, 1)[0]; S.route.splice(i + 1, 0, b); }
+    if (d.legdel) S.route.splice(i, 1);
+    if (d.leginc) S.route[i].months = Math.min(24, S.route[i].months + 1);
+    if (d.legdec) { S.route[i].months -= 1; if (S.route[i].months < 1) S.route.splice(i, 1); }
+    syncMonths(); renderAll();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var g = e.target.closest('.spot-dot');
+    if (g) { e.preventDefault(); g.click(); }
+  });
+
+  function idx(key) { for (var i = 0; i < S.route.length; i++) if (S.route[i].key === key) return i; return -1; }
+
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
