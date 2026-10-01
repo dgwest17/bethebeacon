@@ -6,8 +6,9 @@
 
   var SPOTS = SFSPOTS.SPOTS, MN = SFSPOTS.MONTH_NAMES, PROJECTS = SFSPOTS.PROJECTS;
   var byId = {}; SPOTS.forEach(function (s) { byId[s.id] = s; });
-  var REG = { csa: { name: 'Americas', color: '#BF8430' }, aus: { name: 'Australia', color: '#18A276' }, sea: { name: 'SE Asia', color: '#4487DE' } };
-  var STORE = 'swellfund.v1';
+  var REG = { csa: { name: 'Americas', color: '#BF8430' }, aus: { name: 'Australia & NZ', color: '#18A276' }, sea: { name: 'SE Asia', color: '#4487DE' } };
+  var STORE = 'bethebeacon.v1';
+  var STORE_OLD = 'swellfund.v1';   // pre-rename key, read once on first load
 
   /* ---- state ------------------------------------------------------------ */
 
@@ -19,6 +20,8 @@
   S.assign = {};              // legKey -> project id
   S.tasks = SFTASKS.seed();
   S.intFilter = { pre: 'all', abroad: 'all' };
+  S.leads = SFRESEARCH.seed();
+  S.resFilter = 'all';
   syncMonths();
   load();
 
@@ -33,18 +36,145 @@
     var total = m.csa + m.aus + m.sea;
     if (total > 0) { S.months = m; S.tripMonths = total; }
   }
+  /* ---- saving ------------------------------------------------------------
+     Everything autosaves to this browser on every change. That is one device
+     and one browser — the backup controls below are what make it survive a
+     new laptop, a cleared cache or a phone in Indonesia. */
+
+  var SNAPS = 'bethebeacon.snapshots';
+  var saveState = { ok: true, at: null, msg: '' };
+
   function save() {
-    try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {}
+    try {
+      if (!cloud.applying) S.savedAt = Date.now();
+      localStorage.setItem(STORE, JSON.stringify(S));
+      saveState = { ok: true, at: S.savedAt, msg: '' };
+      rollSnapshot();
+    } catch (e) {
+      saveState = { ok: false, at: saveState.at,
+        msg: /quota/i.test(e && e.name || '') ? 'Storage is full' : 'This browser is blocking storage' };
+    }
+    schedulePush();
+    paintSaveChip();
+  }
+
+  /* One snapshot per calendar day, eight kept. Cheap insurance against a
+     mis-click, not against losing the machine. */
+  function rollSnapshot() {
+    try {
+      var list = JSON.parse(localStorage.getItem(SNAPS) || '[]');
+      var today = new Date().toISOString().slice(0, 10);
+      if (list.length && list[0].day === today) list[0] = { day: today, at: Date.now(), json: JSON.stringify(S) };
+      else list.unshift({ day: today, at: Date.now(), json: JSON.stringify(S) });
+      localStorage.setItem(SNAPS, JSON.stringify(list.slice(0, 8)));
+    } catch (e) { /* snapshots are optional; never let them break a save */ }
+  }
+  function snapshots() {
+    try { return JSON.parse(localStorage.getItem(SNAPS) || '[]'); } catch (e) { return []; }
+  }
+
+  function paintSaveChip() {
+    var el = document.getElementById('savechip');
+    if (!el) return;
+    if (!saveState.ok) {
+      el.className = 'savechip bad';
+      el.innerHTML = '<span class="dot"></span>Not saving — ' + esc(saveState.msg);
+      return;
+    }
+    var d = new Date(saveState.at || Date.now());
+    var t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    el.className = 'savechip' + (cloud.on ? ' synced' : '');
+    el.title = cloud.on
+      ? 'Saved in this browser and synced to your Claude account — open this link on any device.'
+      : 'Saved in this browser only. Take a backup from the Backup panel.';
+    el.innerHTML = '<span class="dot"></span>' + (cloud.on ? 'Synced ' : 'Saved ') + t;
+  }
+
+  /* ---- account sync ------------------------------------------------------
+     On the Claude-hosted copy the page gets a small document store tied to
+     the artifact, so the plan follows you between devices with no account to
+     set up. On any other host (your own domain) this resolves to nothing and
+     the page runs on browser storage plus the backup file. */
+
+  var cloud = { doc: null, on: false, pushing: false, pending: false, applying: false, timer: null };
+
+  function initCloud() {
+    if (!window.claude || typeof window.claude.use !== 'function') return;
+    window.claude.use('db').then(function (db) {
+      if (!db) return;
+      var ref;
+      try { ref = db.doc('state/main'); } catch (e) { return; }
+      cloud.doc = ref; cloud.on = true; paintSaveChip();
+      ref.onSnapshot(function (snap) {
+        if (!snap.exists) return pushCloud();
+        var d = snap.data() || {};
+        if (typeof d.json !== 'string') return;
+        var remoteAt = +d.savedAt || 0, localAt = S.savedAt || 0;
+        if (remoteAt > localAt + 1500) return applyCloud(d.json, remoteAt);
+        if (localAt > remoteAt + 1500) pushCloud();
+      }, function (e) {
+        cloud.on = false; paintSaveChip();
+        if (e && e.code === 'revoked') note('Account sync stopped for this session. Your work is still saved in this browser.', true);
+      });
+    }, function () {});
+  }
+
+  function freshBase() {
+    var base = SF.clone(SF.DEFAULTS);
+    base.route = SFSPOTS.DEFAULT_ROUTE.map(function (l, i) { return mkLeg(l.spot, l.months, i); });
+    base.tasks = SFTASKS.seed();
+    base.intFilter = { pre: 'all', abroad: 'all' };
+    base.leads = SFRESEARCH.seed();
+    base.resFilter = 'all';
+    base.monthFilter = 0; base.regionFilter = 'all'; base.assign = {};
+    return base;
+  }
+
+  function applyCloud(json, at) {
+    var parsed;
+    try { parsed = JSON.parse(json); } catch (e) { return; }
+    var st = parsed && parsed.state ? parsed.state : parsed;
+    if (!st || typeof st !== 'object') return;
+    cloud.applying = true;
+    var base = freshBase(); base.tab = S.tab;
+    Object.keys(st).forEach(function (k) { base[k] = st[k]; });
+    S = base; S.savedAt = at;
+    syncMonths(); renderAll();
+    cloud.applying = false;
+    note('Pulled a newer version of this plan from your account.');
+  }
+
+  function schedulePush() {
+    if (!cloud.on || cloud.applying) return;
+    clearTimeout(cloud.timer);
+    cloud.timer = setTimeout(pushCloud, 1200);
+  }
+
+  function pushCloud() {
+    if (!cloud.on || !cloud.doc) return;
+    if (cloud.pushing) { cloud.pending = true; return; }
+    cloud.pushing = true;
+    var at = S.savedAt || Date.now();
+    cloud.doc.set({ savedAt: at, json: JSON.stringify(S) }).then(function () {
+      cloud.pushing = false; paintSaveChip();
+      if (cloud.pending) { cloud.pending = false; pushCloud(); }
+    }, function (e) {
+      cloud.pushing = false; cloud.pending = false;
+      if (e && (e.code === 'revoked' || e.code === 'not_granted' || e.code === 'capability_disabled')) cloud.on = false;
+      paintSaveChip();
+    });
   }
   function load() {
     try {
-      var raw = localStorage.getItem(STORE);
+      var raw = localStorage.getItem(STORE) || localStorage.getItem(STORE_OLD);
       if (!raw) return;
       var v = JSON.parse(raw);
       Object.keys(v).forEach(function (k) { S[k] = v[k]; });
       if (!S.route || !S.route.length) S.route = SFSPOTS.DEFAULT_ROUTE.map(function (l, i) { return mkLeg(l.spot, l.months, i); });
       if (!S.tasks) S.tasks = SFTASKS.seed();
       if (!S.intFilter) S.intFilter = { pre: 'all', abroad: 'all' };
+      if (!S.leads) S.leads = SFRESEARCH.seed();   // added after the first release
+      if (!S.resFilter) S.resFilter = 'all';
       syncMonths();
     } catch (e) {}
   }
@@ -79,12 +209,13 @@
     document.querySelectorAll('.tabs button').forEach(function (b) {
       b.setAttribute('aria-selected', String(b.dataset.tab === S.tab));
     });
-    ['treasure', 'adventure', 'integrity'].forEach(function (id) {
+    ['treasure', 'adventure', 'integrity', 'research'].forEach(function (id) {
       document.getElementById(id).hidden = S.tab !== id;
     });
     if (S.tab === 'treasure') renderTreasure(keepLevers);
     else if (S.tab === 'adventure') renderAdventure();
-    else renderIntegrity();
+    else if (S.tab === 'integrity') renderIntegrity();
+    else renderResearch();
     save();
   }
 
@@ -667,12 +798,19 @@
   function renderAdventure() {
     document.getElementById('ocean').innerHTML = oceanHTML();
     document.getElementById('monthchips').innerHTML = monthChipsHTML();
+    document.getElementById('presets').innerHTML = presetsHTML();
     document.getElementById('course').innerHTML = courseHTML();
     document.getElementById('coursefoot').innerHTML = courseFootHTML();
     document.getElementById('library').innerHTML = libraryHTML();
     document.getElementById('regionchips').innerHTML = regionChipsHTML();
     document.getElementById('logistics').innerHTML = logisticsHTML();
     document.getElementById('workblocks').innerHTML = workHTML();
+    wireDrag();
+    if (focusAfter) {
+      var h = document.querySelector('[data-drag="' + focusAfter + '"]');
+      if (h) h.focus();
+      focusAfter = null;
+    }
   }
 
   /* Pacific-centred equirectangular: Asia left, the Americas right, the whole
@@ -790,8 +928,10 @@
       var l = sp2.leg, spot = byId[l.spot], f = seasonFit(l, sp2.start, l.months);
       var cls = f >= 0.99 ? 'on' : f >= 0.5 ? 'mid' : 'off';
       var txt = f >= 0.99 ? 'In season' : f > 0 ? Math.round(f * l.months) + ' of ' + l.months + ' in season' : 'Off season';
-      return '<div class="leg" style="--rc:' + REG[l.rid].color + '">' +
-        '<span class="idx num">' + String(i + 1).padStart(2, '0') + '</span>' +
+      return '<div class="leg" data-legkey="' + l.key + '" style="--rc:' + REG[l.rid].color + '">' +
+        '<button class="grip" data-drag="' + l.key + '" aria-label="Reorder ' + esc(spot.name) +
+        '. Drag, or use the arrow keys." title="Drag to reorder"><span class="idx num">' +
+        String(i + 1).padStart(2, '0') + '</span><span class="grip-dots" aria-hidden="true"></span></button>' +
         '<span class="who"><b>' + esc(spot.name) + '</b><span>' + esc(spot.country) + ' · ' + esc(spot.peak) + '</span></span>' +
         '<span class="when">' + monthLabel(tripDate(sp2.start)) + ' – ' + monthLabel(tripDate(sp2.end)) + '</span>' +
         '<span class="mo"><button data-legdec="' + l.key + '" aria-label="One month less">−</button>' +
@@ -799,10 +939,124 @@
         '<button data-leginc="' + l.key + '" aria-label="One month more">+</button></span>' +
         '<span class="cost num">' + money(spot.cost * l.months * S.lifestyle) + '</span>' +
         '<span class="acts"><span class="fit ' + cls + '">' + txt + '</span>' +
-        '<button class="chip" data-legup="' + l.key + '" aria-label="Move earlier">↑</button>' +
-        '<button class="chip" data-legdown="' + l.key + '" aria-label="Move later">↓</button>' +
-        '<button class="chip" data-legdel="' + l.key + '" aria-label="Remove leg">✕</button></span></div>';
+        '<button class="chip" data-legdel="' + l.key + '" aria-label="Remove ' + esc(spot.name) + ' from the course">✕</button></span></div>';
     }).join('');
+  }
+
+  /* Pointer-based drag reordering: one code path for mouse, pen and touch.
+     Rows lift and their neighbours slide out of the way; the drop commits the
+     new order and the whole model recomputes. */
+  var drag = null, focusAfter = null;
+
+  function wireDrag() {
+    var box = document.getElementById('course');
+    if (!box || box.dataset.wired) return;
+    box.dataset.wired = '1';
+
+    box.addEventListener('pointerdown', function (e) {
+      var handle = e.target.closest('[data-drag]');
+      if (!handle || e.button > 0) return;
+      var row = handle.closest('.leg');
+      var rows = Array.prototype.slice.call(box.querySelectorAll('.leg'));
+      var from = rows.indexOf(row);
+      if (from < 0 || rows.length < 2) return;
+      e.preventDefault();
+      var rects = rows.map(function (r) { return r.getBoundingClientRect(); });
+      drag = { box: box, row: row, rows: rows, rects: rects, from: from, to: from,
+               startY: e.clientY, height: rects[from].height + 10, moved: false };
+      row.classList.add('dragging');
+      box.classList.add('is-dragging');
+      try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+
+    box.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      var dy = e.clientY - drag.startY;
+      if (Math.abs(dy) > 3) drag.moved = true;
+      drag.row.style.transform = 'translateY(' + dy + 'px)';
+      var center = drag.rects[drag.from].top + dy + drag.rects[drag.from].height / 2;
+      var to = drag.from;
+      for (var i = 0; i < drag.rects.length; i++) {
+        if (i === drag.from) continue;
+        var mid = drag.rects[i].top + drag.rects[i].height / 2;
+        if (i < drag.from && center < mid) to = Math.min(to, i);
+        if (i > drag.from && center > mid) to = Math.max(to, i);
+      }
+      drag.to = to;
+      drag.rows.forEach(function (r, i) {
+        if (i === drag.from) return;
+        var shift = 0;
+        if (to > drag.from && i > drag.from && i <= to) shift = -drag.height;
+        if (to < drag.from && i >= to && i < drag.from) shift = drag.height;
+        r.style.transform = shift ? 'translateY(' + shift + 'px)' : '';
+      });
+    });
+
+    function end() {
+      if (!drag) return;
+      var d = drag; drag = null;
+      d.rows.forEach(function (r) { r.style.transform = ''; r.classList.remove('dragging'); });
+      d.box.classList.remove('is-dragging');
+      if (!d.moved || d.to === d.from) return;
+      var item = S.route.splice(d.from, 1)[0];
+      S.route.splice(d.to, 0, item);
+      focusAfter = item.key;
+      syncMonths(); renderAll();
+    }
+    box.addEventListener('pointerup', end);
+    box.addEventListener('pointercancel', end);
+
+    box.addEventListener('keydown', function (e) {
+      var handle = e.target.closest('[data-drag]');
+      if (!handle) return;
+      var dir = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+      if (!dir) return;
+      e.preventDefault();
+      var i = idx(handle.dataset.drag), j = i + dir;
+      if (i < 0 || j < 0 || j >= S.route.length) return;
+      var item = S.route.splice(i, 1)[0];
+      S.route.splice(j, 0, item);
+      focusAfter = item.key;
+      syncMonths(); renderAll();
+    });
+  }
+
+  /* Named courses. Loading one replaces the legs and nothing else — every
+     number on the Treasure tab and every checklist item stays put. */
+  function presetsHTML() {
+    var cur = presetMatch();
+    return SFSPOTS.ROUTE_PRESETS.map(function (p) {
+      var fit = presetFit(p);
+      return '<button class="preset' + (p.id === cur ? ' on' : '') + '" data-preset="' + p.id + '">' +
+        '<b>' + esc(p.name) + '</b><span>' + esc(p.sub) + '</span>' +
+        '<em>' + fit.months + ' months · ' + (fit.off ? fit.off + ' off-season' : 'all in season') + ' · ' +
+        money(fit.cost) + ' travel burn</em></button>';
+    }).join('');
+  }
+
+  function presetFit(p) {
+    var m = S.monthsToDeparture + 1, off = 0, total = 0, cost = 0;
+    p.legs.forEach(function (l) {
+      var sp = byId[l.spot];
+      if (!sp) return;
+      for (var i = 0; i < l.months; i++) {
+        var d = tripDate(m + i);
+        if (sp.season.indexOf(d.getMonth() + 1) === -1) off++;
+      }
+      cost += sp.cost * l.months * S.lifestyle;
+      m += l.months; total += l.months;
+    });
+    return { months: total, off: off, cost: cost };
+  }
+
+  /* Which preset, if any, the current course still matches. */
+  function presetMatch() {
+    var mine = S.route.map(function (l) { return l.spot + ':' + l.months; }).join('|');
+    var hit = '';
+    SFSPOTS.ROUTE_PRESETS.forEach(function (p) {
+      if (p.legs.map(function (l) { return l.spot + ':' + l.months; }).join('|') === mine) hit = p.id;
+    });
+    return hit;
   }
 
   function courseFootHTML() {
@@ -822,7 +1076,8 @@
         : off.length + ' leg' + (off.length > 1 ? 's' : '') + ' sit partly outside season: <strong>' +
           off.map(function (s2) { return esc(byId[s2.leg.spot].name); }).join(', ') +
           '</strong>. Move them up or down the list, or trade months with a neighbour.') +
-      ' Changing the course rewrites the region months, the trip length and the burn on the Treasure tab.</p>';
+      ' Drag a leg by its number to move it; the arrow keys work too once a grip is focused. ' +
+      'Changing the course rewrites the region months, the trip length and the burn on the Treasure tab.</p>';
   }
 
   /* ---- library ---------------------------------------------------------- */
@@ -854,7 +1109,7 @@
   function logisticsHTML() {
     var spans = legMonths();
     if (!spans.length) return '<p class="hint">Add legs to see the hops between them.</p>';
-    var rows = '', prev = null, prevName = 'San Diego';
+    var rows = '', prev = null, prevName = 'San Diego', estTotal = 0, kmTotal = 0, longHauls = 0;
     spans.forEach(function (s2) {
       var sp = byId[s2.leg.spot];
       var jump = prev ? haversine(prev.lat, prev.lng, sp.lat, sp.lng) : haversine(33.0, -117.3, sp.lat, sp.lng);
@@ -866,6 +1121,7 @@
         '<td>' + (changed ? '<span class="tag" style="color:var(--gold-hi);border-color:var(--gold)">Long-haul</span>' : '<span class="tag">Regional hop</span>') + '</td>' +
         '<td class="n">' + money(est) + '</td>' +
         '<td style="text-align:left;color:var(--dim);font-size:11.5px">' + esc(sp.board) + '</td></tr>';
+      estTotal += est; kmTotal += jump; if (changed) longHauls++;
       prev = sp; prevName = sp.name;
     });
     var last = byId[spans[spans.length - 1].leg.spot];
@@ -876,11 +1132,18 @@
       '<td class="n">' + money(Math.round((800 + home * 0.09) / 50) * 50) + '</td>' +
       '<td style="text-align:left;color:var(--dim);font-size:11.5px">Coming home with the quiver. Budget two extra bags.</td></tr>';
 
+    var budget = R.oneRows[0].amount + S.fixed.hops * R.T;
+    var over = estTotal - budget;
     return '<div class="tbl-scroll"><table><thead><tr><th>Leg</th><th>Distance</th><th>Type</th><th>Rough airfare + board bags</th><th>Notes</th></tr></thead><tbody>' +
-      rows + '</tbody></table></div>' +
-      '<p class="hint" style="margin-top:12px">Distances are great-circle, so treat the fares as order-of-magnitude, not quotes. The model funds long-hauls from the <strong>' +
-      money(R.oneRows[0].amount) + '</strong> repositioning budget and regional hops from the <strong>' + money(S.fixed.hops) +
-      '/mo</strong> line — if the fares above add up to more than that, raise one of them on the Treasure tab.</p>';
+      rows + '<tr class="hi"><td><b>Every leg, there and home</b></td><td class="n">' +
+      Math.round(kmTotal).toLocaleString('en-US') + ' km</td><td class="n">' + longHauls + ' long-haul</td>' +
+      '<td class="n"><b>' + money(estTotal) + '</b></td><td></td></tr></tbody></table></div>' +
+      '<p class="hint" style="margin-top:12px">Distances are great-circle, so treat the fares as order-of-magnitude, not quotes. ' +
+      'The model funds these from the <strong>' + money(R.oneRows[0].amount) + '</strong> repositioning budget plus the <strong>' +
+      money(S.fixed.hops) + '/mo</strong> in-region line — <strong>' + money(budget) + '</strong> in total. ' +
+      (over > 500
+        ? 'This course needs about <strong style="color:var(--coral)">' + money(over) + ' more</strong> than that. Every extra continent crossing is a real long-haul with board bags; raise the flight budget on the Treasure tab or cut a crossing out of the course.'
+        : 'This course fits inside it with <strong style="color:var(--mint)">' + money(-over) + '</strong> to spare.') + '</p>';
   }
 
   function haversine(a1, o1, a2, o2) {
@@ -1103,10 +1366,422 @@
   function findTask(id) { for (var i = 0; i < S.tasks.length; i++) if (S.tasks[i].id === id) return S.tasks[i]; return null; }
 
   /* ======================================================================
+     RESEARCH
+     ====================================================================== */
+
+  var THEMES = SFRESEARCH.THEMES, STAGES = SFRESEARCH.STAGES;
+  var THEMENAME = {}; THEMES.forEach(function (x) { THEMENAME[x.id] = x.label; });
+
+  function renderResearch() {
+    document.getElementById('res-kpis').innerHTML = resKpisHTML();
+    document.getElementById('res-coverage').innerHTML = coverageHTML();
+    document.getElementById('res-themes').innerHTML = themeBarsHTML();
+    document.getElementById('res-filter').innerHTML = resFilterHTML();
+    document.getElementById('res-board').innerHTML = boardHTML();
+    document.getElementById('res-questions').innerHTML = questionsHTML();
+    document.getElementById('res-how').innerHTML = howHTML();
+    fillResForm();
+    wireBoard();
+  }
+
+  function leadsAt(spotId) { return S.leads.filter(function (l) { return l.spot === spotId; }); }
+  function stageIdx(id) { for (var i = 0; i < STAGES.length; i++) if (STAGES[i].id === id) return i; return 0; }
+
+  function resKpisHTML() {
+    var legSpots = {}; S.route.forEach(function (l) { legSpots[l.spot] = true; });
+    var spots = Object.keys(legSpots);
+    var covered = spots.filter(function (s2) { return leadsAt(s2).length > 0; }).length;
+    var booked = S.leads.filter(function (l) { return l.stage === 'booked'; }).length;
+    var met = S.leads.filter(function (l) { return l.stage === 'met' || l.stage === 'shared'; }).length;
+    var shared = S.leads.filter(function (l) { return l.stage === 'shared'; }).length;
+    return [
+      { surf: 'The Log', fin: 'Leads on the board', val: String(S.leads.length), cls: 'key',
+        sub: S.leads.filter(function (l) { return l.stage === 'spotted'; }).length + ' still just spotted' },
+      { surf: 'Coverage', fin: 'Stops with someone to see', val: covered + '/' + spots.length,
+        cls: covered === spots.length ? 'good' : 'warn',
+        sub: covered === spots.length ? 'Every stop has a lead' : (spots.length - covered) + ' stops with nobody yet' },
+      { surf: 'In The Diary', fin: 'Conversations booked', val: String(booked),
+        cls: booked ? 'good' : '', sub: S.leads.filter(function (l) { return l.stage === 'reached'; }).length + ' waiting on a reply' },
+      { surf: 'Logged', fin: 'Interviewed, and published', val: met + ' / ' + shared,
+        cls: shared ? 'good' : '', sub: 'Learn it, then share it — that is the whole point' }
+    ].map(function (t) {
+      return '<div class="kpi ' + t.cls + '"><div class="surf">' + t.surf + '</div><div class="fin">' + t.fin + '</div>' +
+        '<div class="val num">' + t.val + '</div><div class="sub">' + esc(t.sub) + '</div></div>';
+    }).join('');
+  }
+
+  function coverageHTML() {
+    var spans = legMonths();
+    if (!spans.length) return '<p class="hint">Build a course on the Adventure tab and your stops will show up here.</p>';
+    var seen = {}, rows = '';
+    spans.forEach(function (s2) {
+      if (seen[s2.leg.spot]) return;
+      seen[s2.leg.spot] = true;
+      var sp = byId[s2.leg.spot], n = leadsAt(s2.leg.spot).length;
+      rows += '<div class="cov' + (n ? '' : ' gap') + '" style="--rc:' + REG[s2.leg.rid].color + '">' +
+        '<div><b>' + esc(sp.name) + '</b><div class="when2">' + esc(sp.country) + ' · from ' + monthLabel(tripDate(s2.start)) + '</div></div>' +
+        '<span class="n">' + (n ? n + (n === 1 ? ' lead' : ' leads') : 'nobody yet') + '</span>' +
+        '<button class="chip" data-covadd="' + s2.leg.spot + '">Add</button></div>';
+    });
+    var gaps = Object.keys(seen).filter(function (s2) { return !leadsAt(s2).length; }).length;
+    return '<div class="coverage">' + rows + '</div>' +
+      '<p class="hint" style="margin-top:12px">' + (gaps
+        ? 'Every stop with nobody on it is a month you arrive as a tourist. Find one person before you land, and the whole leg changes.'
+        : 'Every stop on the course has at least one lead. Now the work is turning them into conversations.') + '</p>';
+  }
+
+  function themeBarsHTML() {
+    var max = 1;
+    var counts = THEMES.map(function (t) {
+      var n = S.leads.filter(function (l) { return l.theme === t.id; }).length;
+      if (n > max) max = n;
+      return { label: t.label, n: n };
+    });
+    return '<div class="catbars">' + counts.map(function (c) {
+      return '<div class="catbar"><span>' + esc(c.label.split(',')[0]) + '</span>' +
+        '<div class="bar"><i style="width:' + (c.n / max * 100).toFixed(1) + '%"></i></div>' +
+        '<span class="n">' + c.n + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function resFilterHTML() {
+    var h = '<button class="chip" data-resfilter="all" aria-pressed="' + (S.resFilter === 'all') + '">All themes</button>';
+    THEMES.forEach(function (t) {
+      if (!S.leads.some(function (l) { return l.theme === t.id; })) return;
+      h += '<button class="chip" data-resfilter="' + t.id + '" aria-pressed="' + (S.resFilter === t.id) + '">' + esc(t.label) + '</button>';
+    });
+    return h;
+  }
+
+  function boardHTML() {
+    return STAGES.map(function (st, i) {
+      var mine = S.leads.filter(function (l) {
+        return l.stage === st.id && (S.resFilter === 'all' || l.theme === S.resFilter);
+      });
+      return '<div class="col' + (i >= 4 ? ' done' : '') + '" data-stage="' + st.id + '">' +
+        '<div class="col-h"><b>' + esc(st.label) + '</b><span>' + mine.length + '</span></div>' +
+        mine.map(leadHTML).join('') +
+        (mine.length ? '' : '<p class="hint" style="padding:6px 2px">' + esc(st.hint) + '</p>') +
+        '</div>';
+    }).join('');
+  }
+
+  function leadHTML(l) {
+    var sp = l.spot && byId[l.spot];
+    var color = sp ? REG[sp.region].color : 'var(--gold)';
+    return '<div class="lead" data-lead="' + l.id + '" style="--tc:' + color + '">' +
+      '<h5>' + esc(l.org) + '</h5>' +
+      '<div class="where">' + esc(l.place || (sp ? sp.name : 'Anywhere')) + ' · ' + esc(THEMENAME[l.theme] || l.theme) + '</div>' +
+      (l.what ? '<div class="what">' + esc(l.what) + '</div>' : '') +
+      (l.why ? '<div class="why">' + esc(l.why) + '</div>' : '') +
+      '<div class="nx" contenteditable="true" data-next="' + l.id + '" role="textbox" aria-label="Next step for ' + esc(l.org) + '">' + esc(l.next) + '</div>' +
+      '<div class="row">' +
+      (l.url ? '<a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(shortUrl(l.url)) + '</a>' : '') +
+      '<button class="kill" data-killlead="' + l.id + '" aria-label="Remove ' + esc(l.org) + '">✕</button></div></div>';
+  }
+
+  function shortUrl(u) {
+    return String(u).replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  }
+
+  function questionsHTML() {
+    return '<ol class="qlist">' + SFRESEARCH.QUESTIONS.map(function (q) {
+      return '<li><span>' + esc(q) + '</span></li>';
+    }).join('') + '</ol>' +
+      '<p class="hint" style="margin-top:14px">Same eight every time. Asking everyone the same questions is what turns eighteen conversations into one piece of work instead of eighteen anecdotes.</p>';
+  }
+
+  function howHTML() {
+    return '<div class="kv">' +
+      ['Find one person per stop before you land — not when you arrive.',
+       'Lead with what you can give: footage, a write-up, an afternoon of labour, an audience.',
+       'Record everything, with permission. Transcribe on the flat days.',
+       'Ask the last question every time: who else should I talk to. That is how this becomes a community rather than a list.',
+       'Publish something within two weeks of each interview, while you still remember what surprised you.',
+       'Send the finished piece back to the person in it. That is what makes the next introduction easy.'
+      ].map(function (s2, i) {
+        return '<div class="r"><span class="k">' + String(i + 1).padStart(2, '0') + '</span><span class="fill" style="flex:0"></span>' +
+          '<span style="font-size:12.5px;color:var(--muted);line-height:1.5">' + esc(s2) + '</span></div>';
+      }).join('') + '</div>' +
+      '<p class="hint" style="margin-top:14px">Seventeen of these leads came seeded with a real source link and no contact name. Finding the right person is the first piece of research on every one of them.</p>';
+  }
+
+  function fillResForm() {
+    var ss = document.getElementById('res-spot'), ts = document.getElementById('res-theme');
+    var keepS = ss.value, keepT = ts.value;
+    var seen = {}, opts = '<option value="">Anywhere / global</option>';
+    S.route.forEach(function (l) {
+      if (seen[l.spot]) return; seen[l.spot] = true;
+      opts += '<option value="' + l.spot + '">' + esc(byId[l.spot].name) + '</option>';
+    });
+    ss.innerHTML = opts;
+    if (keepS !== null && ss.querySelector('[value="' + keepS + '"]')) ss.value = keepS;
+    ts.innerHTML = THEMES.map(function (t) { return '<option value="' + t.id + '">' + esc(t.label) + '</option>'; }).join('');
+    if (keepT) ts.value = keepT;
+  }
+
+  function findLead(id) { for (var i = 0; i < S.leads.length; i++) if (S.leads[i].id === id) return S.leads[i]; return null; }
+
+  /* Drag a lead between columns. Same pointer path as the course legs; here
+     the drop target is whichever column the pointer is over. */
+  var ldrag = null;
+
+  function wireBoard() {
+    var box = document.getElementById('res-board');
+    if (!box || box.dataset.wired) return;
+    box.dataset.wired = '1';
+
+    box.addEventListener('pointerdown', function (e) {
+      if (e.target.closest('a,button,[contenteditable="true"]')) return;
+      var card = e.target.closest('.lead');
+      if (!card || e.button > 0) return;
+      e.preventDefault();
+      var r = card.getBoundingClientRect();
+      ldrag = { card: card, id: card.dataset.lead, x: e.clientX, y: e.clientY, w: r.width, moved: false, col: null };
+      try { card.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+
+    box.addEventListener('pointermove', function (e) {
+      if (!ldrag) return;
+      var dx = e.clientX - ldrag.x, dy = e.clientY - ldrag.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        if (!ldrag.moved) { ldrag.moved = true; ldrag.card.classList.add('dragging'); ldrag.card.style.width = ldrag.w + 'px'; }
+      }
+      if (!ldrag.moved) return;
+      ldrag.card.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      var over = null;
+      box.querySelectorAll('.col').forEach(function (c) {
+        var r = c.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right) over = c;
+        c.classList.remove('over');
+      });
+      if (over) over.classList.add('over');
+      ldrag.col = over;
+    });
+
+    function end() {
+      if (!ldrag) return;
+      var d = ldrag; ldrag = null;
+      d.card.classList.remove('dragging');
+      d.card.style.transform = ''; d.card.style.width = '';
+      box.querySelectorAll('.col').forEach(function (c) { c.classList.remove('over'); });
+      if (!d.moved || !d.col) return;
+      var lead = findLead(d.id), stage = d.col.dataset.stage;
+      if (lead && lead.stage !== stage) { lead.stage = stage; renderResearch(); save(); }
+    }
+    box.addEventListener('pointerup', end);
+    box.addEventListener('pointercancel', end);
+  }
+
+  /* ======================================================================
+     BACKUP, RESTORE, PORTABLE LINK
+     ====================================================================== */
+
+  function bundle() {
+    return JSON.stringify({ app: 'be-the-beacon', v: 2, savedAt: Date.now(), state: S }, null, 2);
+  }
+  function stamp() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function adopt(raw, where) {
+    var parsed;
+    try { parsed = JSON.parse(raw); } catch (e) { return note('That is not a Be The Beacon backup — it would not parse as JSON.', true); }
+    var st = parsed && parsed.state ? parsed.state : parsed;
+    if (!st || typeof st !== 'object' || (!st.route && !st.tasks && !st.fixed)) {
+      return note('That file does not look like a Be The Beacon backup.', true);
+    }
+    if (!confirm('Replace everything currently on this dashboard with the backup from ' +
+      (parsed.savedAt ? new Date(parsed.savedAt).toLocaleString() : 'that file') + '?')) return;
+    var base = freshBase(); base.tab = S.tab;
+    Object.keys(st).forEach(function (k) { base[k] = st[k]; });
+    S = base;
+    syncMonths(); renderAll();
+    var dp = document.getElementById('datapanel');
+    if (dp) { dp.open = true; paintDataPanel(); }
+    note('Restored from ' + where + '. Everything on all three tabs now matches that backup.');
+  }
+
+  function note(msg, bad) {
+    var el = document.getElementById('datanote');
+    if (!el) { if (bad) alert(msg); return; }
+    el.textContent = msg;
+    el.className = 'datanote' + (bad ? ' bad' : ' good');
+    clearTimeout(note._t);
+    note._t = setTimeout(function () { el.textContent = ''; el.className = 'datanote'; }, 6000);
+  }
+
+  function downloadBackup() {
+    var name = 'be-the-beacon-' + stamp() + '.json', data = bundle();
+    if (window.claude && typeof window.claude.use === 'function') {
+      window.claude.use('downloads').then(function (dl) {
+        if (!dl) return blobDownload(name, data);
+        dl.save({ filename: name, data: data }).then(function () {
+          note('Saved as ' + name + '. Keep it somewhere that syncs.');
+        }, function (err) {
+          if (err && err.code === 'declined') note('Save cancelled — nothing was written.');
+          else blobDownload(name, data);
+        });
+      }, function () { blobDownload(name, data); });
+      return;
+    }
+    blobDownload(name, data);
+  }
+
+  function blobDownload(name, data) {
+    try {
+      var blob = new Blob([data], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      note('Backup file created. If nothing downloaded, use Copy backup instead — some embedded previews block downloads.');
+    } catch (e) {
+      note('This view will not let the page download a file. Use Copy backup instead.', true);
+    }
+  }
+
+  function copyText(txt, ok) {
+    function manual() {
+      var pb = document.getElementById('pastebox'), ta = document.getElementById('pastearea');
+      if (!pb || !ta) return alert(txt.slice(0, 2000));
+      ta.value = txt; pb.hidden = false; ta.focus(); ta.select();
+      note('This view blocks the clipboard. The text is in the box below — select it and copy by hand.', true);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = txt; ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      var done = false;
+      try { done = document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+      if (done) note(ok); else manual();
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () { note(ok); }, fallback);
+    } else fallback();
+  }
+
+  /* Portable link: the whole dashboard, gzipped into the URL. Mail it to
+     yourself and open it on any device — no account, no server. */
+  function toBase64url(bytes) {
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function fromBase64url(s) {
+    var b = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+    var out = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) out[i] = b.charCodeAt(i);
+    return out;
+  }
+  function gzip(str) {
+    if (typeof CompressionStream === 'undefined') return Promise.resolve(null);
+    var cs = new CompressionStream('gzip');
+    var w = cs.writable.getWriter();
+    w.write(new TextEncoder().encode(str)); w.close();
+    return new Response(cs.readable).arrayBuffer().then(function (b) { return new Uint8Array(b); });
+  }
+  function gunzip(bytes) {
+    var ds = new DecompressionStream('gzip');
+    var w = ds.writable.getWriter();
+    w.write(bytes); w.close();
+    return new Response(ds.readable).text();
+  }
+
+  function portableLink() {
+    var json = JSON.stringify({ app: 'be-the-beacon', v: 2, savedAt: Date.now(), state: S });
+    gzip(json).then(function (bytes) {
+      var base = location.href.split('#')[0];
+      var url = bytes ? base + '#z=' + toBase64url(bytes) : base + '#j=' + encodeURIComponent(json);
+      if (url.length > 60000) return note('Your plan is too big for a link. Use the backup file instead.', true);
+      copyText(url, 'Portable link copied — ' + Math.round(url.length / 1024) + ' KB. Mail it to yourself; opening it anywhere loads this exact plan.');
+    });
+  }
+
+  function readHashState() {
+    var h = location.hash || '';
+    if (h.indexOf('#z=') === 0) {
+      gunzip(fromBase64url(h.slice(3))).then(function (txt) {
+        history.replaceState(null, '', location.pathname + location.search);
+        adopt(txt, 'the link you opened');
+      }, function () { note('That link is damaged and could not be read.', true); });
+      return true;
+    }
+    if (h.indexOf('#j=') === 0) {
+      var txt = decodeURIComponent(h.slice(3));
+      history.replaceState(null, '', location.pathname + location.search);
+      adopt(txt, 'the link you opened');
+      return true;
+    }
+    return false;
+  }
+
+  function dataPanelHTML() {
+    var snaps = snapshots();
+    var last = saveState.at ? new Date(saveState.at).toLocaleString() : 'not yet';
+    return (cloud.on
+      ? '<p class="hint" style="margin-bottom:14px">Every change on all three tabs saves automatically to <strong>this browser and to your Claude account</strong>. ' +
+        'Open this same link on your phone or another laptop and the plan follows you — no account to set up, nothing to remember. Last save: <strong>' + esc(last) + '</strong>. ' +
+        'Still take a backup file now and then: sync is tied to this artifact, and a file is yours whatever happens to it.</p>'
+      : '<p class="hint" style="margin-bottom:14px">Every change on all three tabs saves automatically — but only into <strong>this browser on this device</strong>. ' +
+        'Clear your site data, switch laptops, or open it on your phone and it starts from the defaults. Last save: <strong>' + esc(last) + '</strong>. ' +
+        'Take a backup file whenever you have made real progress, and keep it somewhere that syncs.</p>') +
+      '<p class="hint" style="margin-bottom:14px">The <strong>portable link</strong> packs this entire plan — every number, the whole course, every checklist item — into one URL. ' +
+      'Mail it to yourself and open it on any device to pick up exactly where you left off. It points at whatever address you opened this page from, so use it from your deployed site rather than a preview.</p>' +
+      '<div class="databtns">' +
+      '<button class="add" data-dl>Download backup file</button>' +
+      '<button class="ghost" data-copyjson>Copy backup to clipboard</button>' +
+      '<button class="ghost" data-link>Copy portable link</button>' +
+      '<label class="ghost filebtn">Restore from file<input type="file" id="restorefile" accept="application/json,.json" hidden></label>' +
+      '<button class="ghost" data-paste>Restore from pasted text</button>' +
+      '<button class="ghost" data-reset>Reset to CSV defaults</button>' +
+      '</div><div class="datanote" id="datanote"></div>' +
+      '<div id="pastebox" hidden style="margin-top:12px">' +
+      '<textarea id="pastearea" rows="5" placeholder="Paste the contents of a swell-fund-….json backup here" ' +
+      'style="width:100%;font-family:var(--mono);font-size:11.5px;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:9px"></textarea>' +
+      '<button class="add" data-pastego style="margin-top:8px">Restore this</button></div>' +
+      '<div class="card-h" style="margin-top:20px">Daily snapshots on this device<span class="rule"></span><em>' + snaps.length + ' kept</em></div>' +
+      (snaps.length
+        ? '<div class="donebucket">' + snaps.map(function (s2, i) {
+            return '<div class="doneline"><span class="tick">' + (i === 0 ? '●' : '○') + '</span>' +
+              '<span class="t" style="text-decoration:none;color:var(--text)">' +
+              new Date(s2.at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) +
+              (i === 0 ? ' — today' : '') + '</span>' +
+              '<span class="tag place">' + Math.round(s2.json.length / 1024) + ' KB</span>' +
+              '<button class="chip" data-snap="' + i + '">Restore</button></div>';
+          }).join('') + '</div>'
+        : '<p class="hint">No snapshots yet — one is written each day you use the dashboard.</p>') +
+      '<p class="hint" style="margin-top:14px">Snapshots live in the same browser storage, so they protect you from a mis-click, not from losing the machine. The backup file and the portable link are the ones that travel.</p>';
+  }
+
+  /* ======================================================================
      EVENTS
      ====================================================================== */
 
   document.addEventListener('submit', function (e) {
+    if (e.target.id === 'resform') {
+      e.preventDefault();
+      var org = document.getElementById('res-org').value.trim();
+      if (!org) return;
+      var spot = document.getElementById('res-spot').value;
+      S.leads.unshift({
+        id: 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        org: org, person: '', spot: spot,
+        place: spot && byId[spot] ? byId[spot].name + ', ' + byId[spot].country : 'Anywhere',
+        theme: document.getElementById('res-theme').value,
+        what: document.getElementById('res-what').value.trim(),
+        why: '', url: document.getElementById('res-url').value.trim(),
+        stage: 'spotted', next: '', notes: ''
+      });
+      ['res-org', 'res-what', 'res-url'].forEach(function (id) { document.getElementById(id).value = ''; });
+      renderResearch(); save();
+      document.getElementById('res-org').focus();
+      return;
+    }
     if (e.target.id !== 'addform') return;
     e.preventDefault();
     var txt = document.getElementById('add-text').value.trim();
@@ -1124,6 +1799,12 @@
   });
 
   document.addEventListener('blur', function (e) {
+    var nid = e.target && e.target.dataset && e.target.dataset.next;
+    if (nid) {
+      var lead = findLead(nid);
+      if (lead) { var v = e.target.textContent.trim(); if (v !== lead.next) { lead.next = v; save(); } }
+      return;
+    }
     var id = e.target && e.target.dataset && e.target.dataset.edittask;
     if (!id) return;
     var t = findTask(id);
@@ -1155,19 +1836,46 @@
   });
 
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-tab],[data-month],[data-region],[data-add],[data-legup],[data-legdown],' +
-      '[data-legdel],[data-leginc],[data-legdec],[data-spot],[data-reset],[data-toggletask],[data-killtask],[data-intfilter]');
+    var t = e.target.closest('[data-tab],[data-month],[data-region],[data-add],[data-legdel],[data-leginc],' +
+      '[data-legdec],[data-spot],[data-reset],[data-toggletask],[data-killtask],[data-intfilter],' +
+      '[data-datatoggle],[data-dl],[data-copyjson],[data-link],[data-paste],[data-pastego],[data-snap],[data-preset],' +
+      '[data-resfilter],[data-killlead],[data-covadd]');
     if (!t) return;
     var d = t.dataset;
     if (d.tab) { S.tab = d.tab; return renderAll(); }
+    if (d.datatoggle !== undefined) {
+      var dp = document.getElementById('datapanel');
+      dp.open = !dp.open;
+      if (dp.open) { paintDataPanel(); dp.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+      return;
+    }
+    if (d.dl !== undefined) return downloadBackup();
+    if (d.copyjson !== undefined) return copyText(bundle(), 'Backup copied. Paste it into a note or a file you keep somewhere that syncs.');
+    if (d.link !== undefined) return portableLink();
+    if (d.paste !== undefined) {
+      var pb = document.getElementById('pastebox');
+      pb.hidden = !pb.hidden;
+      if (!pb.hidden) document.getElementById('pastearea').focus();
+      return;
+    }
+    if (d.pastego !== undefined) {
+      var txt = document.getElementById('pastearea').value.trim();
+      if (!txt) return note('Nothing pasted yet.', true);
+      return adopt(txt, 'pasted text');
+    }
+    if (d.snap !== undefined) {
+      var s2 = snapshots()[+d.snap];
+      if (s2) adopt(s2.json, 'the snapshot from ' + new Date(s2.at).toLocaleDateString());
+      return;
+    }
     if (d.reset !== undefined) {
-      if (!confirm('Reset every number and the whole course back to the CSV defaults? Your Integrity list is kept.')) return;
-      var keepTab = S.tab, keepTasks = S.tasks, keepFilter = S.intFilter;
+      if (!confirm('Reset every number and the whole course back to the CSV defaults?\n\nYour Integrity checklist and your Research board are kept.')) return;
+      var keepTab = S.tab, keepTasks = S.tasks, keepFilter = S.intFilter, keepLeads = S.leads;
       try { localStorage.removeItem(STORE); } catch (err) {}
       S = SF.clone(SF.DEFAULTS);
       S.route = SFSPOTS.DEFAULT_ROUTE.map(function (l, i) { return mkLeg(l.spot, l.months, i); });
       S.tab = keepTab; S.monthFilter = 0; S.regionFilter = 'all'; S.assign = {};
-      S.tasks = keepTasks; S.intFilter = keepFilter;
+      S.tasks = keepTasks; S.intFilter = keepFilter; S.leads = keepLeads;
       syncMonths(); return renderAll();
     }
     if (d.toggletask) {
@@ -1183,10 +1891,33 @@
       }
       return;
     }
+    if (d.resfilter) { S.resFilter = d.resfilter; renderResearch(); save(); return; }
+    if (d.killlead) {
+      var lead = findLead(d.killlead);
+      if (lead && confirm('Remove "' + lead.org + '" from the board?')) {
+        S.leads = S.leads.filter(function (x) { return x.id !== d.killlead; });
+        renderResearch(); save();
+      }
+      return;
+    }
+    if (d.covadd) {
+      var sel = document.getElementById('res-spot');
+      if (sel) sel.value = d.covadd;
+      document.getElementById('res-org').focus();
+      return;
+    }
     if (d.intfilter) {
       var parts = d.intfilter.split(':');
       S.intFilter[parts[0]] = parts[1];
       renderIntegrity(); save(); return;
+    }
+    if (d.preset) {
+      var p = SFSPOTS.ROUTE_PRESETS.filter(function (x) { return x.id === d.preset; })[0];
+      if (!p) return;
+      if (presetMatch() !== p.id &&
+          !confirm('Replace your current course with "' + p.name + '"?\n\nOnly the legs change — every figure on the Treasure tab and everything on Integrity stays exactly as it is.')) return;
+      S.route = p.legs.map(function (l, i) { return mkLeg(l.spot, l.months, i); });
+      syncMonths(); return renderAll();
     }
     if (d.month !== undefined) { S.monthFilter = +d.month; return renderAll(); }
     if (d.region) { S.regionFilter = d.region; return renderAll(); }
@@ -1215,5 +1946,29 @@
 
   function idx(key) { for (var i = 0; i < S.route.length; i++) if (S.route[i].key === key) return i; return -1; }
 
+  function paintDataPanel() {
+    var b = document.getElementById('databody');
+    if (b) b.innerHTML = dataPanelHTML();
+  }
+
+  document.addEventListener('change', function (e) {
+    if (e.target.id !== 'restorefile') return;
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    var fr = new FileReader();
+    fr.onload = function () { adopt(String(fr.result), f.name); e.target.value = ''; };
+    fr.onerror = function () { note('Could not read that file.', true); };
+    fr.readAsText(f);
+  });
+
+  document.getElementById('datapanel').addEventListener('toggle', function (e) {
+    if (e.target.open) paintDataPanel();
+  });
+
   renderAll();
+  paintSaveChip();
+  initCloud();
+  /* A #z=… or #j=… link carries a whole saved plan; it asks before replacing
+     whatever this browser already holds. */
+  readHashState();
 })();

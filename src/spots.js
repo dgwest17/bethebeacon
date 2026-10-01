@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SWELL FUND — surf destinations
+   BE THE BEACON — surf destinations
    season: months the spot actually works (1 = Jan). cost: solo monthly all-in,
    housing + food + local transport, in the region's own currency converted to USD.
    wifi: 1 = phone tether only, 5 = fibre, take a client call.
@@ -110,6 +110,29 @@
       visa: 'eVisitor.', board: 'Twelve hours north of Perth on one road. 4WD and water tanks.',
       watch: 'No phone signal, no services, no medical. A satellite messenger is the honest minimum.' },
 
+    /* ---- New Zealand ---------------------------------------------------- */
+    { id: 'raglan', name: 'Raglan', country: 'New Zealand', region: 'aus', lat: -37.80, lng: 174.87,
+      season: m(4, 10), peak: 'May–Sep', cost: 3400, wifi: 4, utc: 12, level: 'Intermediate',
+      wave: 'Manu Bay, Whale Bay, Indicators — three left points that join into one very long wave on a solid SW.',
+      visa: 'NZeTA before boarding, then 90 days visa-free on a US passport.',
+      board: 'Two hours from Auckland. Van life is easy here and the freedom-camping rules are clear.',
+      watch: 'Water is 14–18°C. A 3/2 in autumn, a 4/3 by July. The point gets busy when it is on.' },
+    { id: 'gisborne', name: 'Gisborne / Mahia', country: 'New Zealand', region: 'aus', lat: -38.66, lng: 178.02,
+      season: m(11, 4), peak: 'Dec–Mar', cost: 3100, wifi: 4, utc: 12, level: 'All levels',
+      wave: 'East coast, so it runs on the opposite season to Raglan — cyclone swell all summer, and Mahia Peninsula for the points.',
+      visa: 'NZeTA, 90 days.', board: 'Domestic hop from Auckland, or a long drive round East Cape.',
+      watch: 'The reason to be in New Zealand in January rather than July. Warmest water in the country.' },
+    { id: 'shipwreck', name: 'Shipwreck Bay', country: 'New Zealand', region: 'aus', lat: -35.17, lng: 173.13,
+      season: m(4, 9), peak: 'May–Aug', cost: 2800, wifi: 2, utc: 12, level: 'Intermediate',
+      wave: 'Ahipara, the bottom of Ninety Mile Beach. A sand-and-rock left that runs for hundreds of metres on a W swell.',
+      visa: 'NZeTA, 90 days.', board: 'Five hours north of Auckland. Far Northland, thin services.',
+      watch: 'Needs a west swell and a southeast wind together. When it misses, there is nothing else nearby.' },
+    { id: 'dunedin', name: 'Dunedin / Aramoana', country: 'New Zealand', region: 'aus', lat: -45.87, lng: 170.50,
+      season: m(4, 9), peak: 'May–Aug', cost: 3000, wifi: 4, utc: 12, level: 'Expert',
+      wave: 'Aramoana is a heavy left barrel over sand. Southern Ocean swell hits the Otago coast all winter, uncrowded.',
+      visa: 'NZeTA, 90 days.', board: 'Fly to Dunedin. A university town, so cheap rooms and real internet.',
+      watch: '8–12°C water: 5/4, hood, boots, gloves. Great whites are present and locals take it seriously.' },
+
     /* ---- SE Asia, Sri Lanka, Indonesia, Philippines --------------------- */
     { id: 'bali', name: 'Bali — Uluwatu / Canggu', country: 'Indonesia', region: 'sea', lat: -8.81, lng: 115.09,
       season: m(4, 10), peak: 'May–Sep dry season', cost: 2200, wifi: 5, utc: 8, level: 'All levels',
@@ -168,20 +191,66 @@
      lands inside its own season for a March 2027 departure. Australia comes
      first because that puts van life in the southern winter, which is what
      you asked for and what the swell charts agree with. */
-  var DEFAULT_ROUTE = [
-    { spot: 'bells', months: 2 },      // Apr–May 27    · Southern Ocean swell switches on
-    { spot: 'margarets', months: 3 },  // Jun–Aug 27    · peak WA winter, van life
-    { spot: 'sydney', months: 1 },     // Sep 27        · the work month: fastest wifi in Australia
-    { spot: 'mentawais', months: 1 },  // Oct 27        · the charter block lands here
-    { spot: 'siargao', months: 1 },    // Nov 27        · last of the typhoon swell
-    { spot: 'midigama', months: 4 },   // Dec 27–Mar 28 · Sri Lanka south coast season
-    { spot: 'tunco', months: 2 },      // Apr–May 28    · El Salvador points
-    { spot: 'puerto', months: 2 },     // Jun–Jul 28    · peak south swell
-    { spot: 'lobitos', months: 2 },    // Aug–Sep 28    · Peru winter
-    { spot: 'bali', months: 1 },       // Oct 28        · tail of the dry season
-    { spot: 'siargao', months: 1 },    // Nov 28        · Cloud 9 again
-    { spot: 'midigama', months: 4 }    // Dec 28–Mar 29 · back to the south coast, then home
+  /* Courses you can load with one click. Every leg in every preset is checked
+     against its own season for an April 2027 departure. */
+  var ROUTE_PRESETS = [
+    { id: 'beacon', name: 'The Beacon Run', sub: 'Central America in spring, two southern winters, home via South America',
+      legs: [
+        { spot: 'tunco', months: 2 },      // Apr–May 27    · spring start, El Salvador points
+        { spot: 'margarets', months: 2 },  // Jun–Jul 27    · peak WA winter, van life
+        { spot: 'raglan', months: 2 },     // Aug–Sep 27    · New Zealand, the long left
+        { spot: 'bali', months: 1 },       // Oct 27        · tail of the dry season
+        { spot: 'siargao', months: 1 },    // Nov 27        · last of the typhoon swell
+        { spot: 'midigama', months: 4 },   // Dec 27–Mar 28 · Sri Lanka south coast
+        { spot: 'bali', months: 2 },       // Apr–May 28    · dry season opens again
+        { spot: 'bells', months: 1 },      // Jun 28        · second southern winter
+        { spot: 'margarets', months: 2 },  // Jul–Aug 28    · WA again, peak swell
+        { spot: 'mentawais', months: 1 },  // Sep 28        · the charter block lands here
+        { spot: 'bali', months: 1 },       // Oct 28        · last of Indo
+        { spot: 'siargao', months: 1 },    // Nov 28        · Cloud 9 one more time
+        { spot: 'ayampe', months: 4 }      // Dec 28–Mar 29 · South America, then home
+      ] },
+    { id: 'nzwinter', name: 'Long New Zealand', sub: 'A full southern winter across both islands before Asia',
+      legs: [
+        { spot: 'tunco', months: 2 },      // Apr–May 27
+        { spot: 'raglan', months: 2 },     // Jun–Jul 27
+        { spot: 'dunedin', months: 1 },    // Aug 27
+        { spot: 'shipwreck', months: 1 },  // Sep 27
+        { spot: 'bali', months: 1 },       // Oct 27
+        { spot: 'siargao', months: 1 },    // Nov 27
+        { spot: 'midigama', months: 4 },   // Dec 27–Mar 28
+        { spot: 'bali', months: 2 },       // Apr–May 28
+        { spot: 'margarets', months: 3 },  // Jun–Aug 28
+        { spot: 'mentawais', months: 1 },  // Sep 28
+        { spot: 'bali', months: 1 },       // Oct 28
+        { spot: 'siargao', months: 1 },    // Nov 28
+        { spot: 'ayampe', months: 4 }      // Dec 28–Mar 29
+      ] },
+    { id: 'ausfirst', name: 'Australia First', sub: 'Straight to the southern winter, the Americas at the end',
+      legs: [
+        { spot: 'bells', months: 2 }, { spot: 'margarets', months: 3 }, { spot: 'sydney', months: 1 },
+        { spot: 'mentawais', months: 1 }, { spot: 'siargao', months: 1 }, { spot: 'midigama', months: 4 },
+        { spot: 'tunco', months: 2 }, { spot: 'puerto', months: 2 }, { spot: 'lobitos', months: 2 },
+        { spot: 'bali', months: 1 }, { spot: 'siargao', months: 1 }, { spot: 'midigama', months: 4 }
+      ] },
+    { id: 'csv', name: 'The CSV Split', sub: 'Your original 6 / 6 / 12 in three clean blocks, resequenced to stay in season',
+      legs: [
+        { spot: 'tunco', months: 2 },      // Apr–May 27    · Americas block
+        { spot: 'puerto', months: 2 },     // Jun–Jul 27
+        { spot: 'lobitos', months: 2 },    // Aug–Sep 27
+        { spot: 'raglan', months: 1 },     // Oct 27        · Oceania block — NZ covers the
+        { spot: 'gisborne', months: 2 },   // Nov–Dec 27      Australian spring dead patch
+        { spot: 'noosa', months: 1 },      // Jan 28
+        { spot: 'goldcoast', months: 2 },  // Feb–Mar 28    · cyclone season
+        { spot: 'bali', months: 2 },       // Apr–May 28    · Asia block
+        { spot: 'sumbawa', months: 2 },    // Jun–Jul 28
+        { spot: 'mentawais', months: 1 },  // Aug 28
+        { spot: 'siargao', months: 3 },    // Sep–Nov 28
+        { spot: 'midigama', months: 4 }    // Dec 28–Mar 29
+      ] }
   ];
+
+  var DEFAULT_ROUTE = ROUTE_PRESETS[0].legs;
 
   /* Work the trip supports — editable on the Adventure tab. */
   var PROJECTS = [
@@ -193,7 +262,8 @@
     { id: 'p6', name: 'Deep work: no calls, build only', why: 'The remote low-wifi legs are for this and nothing else.', need: 1 }
   ];
 
-  var API = { SPOTS: SPOTS, MONTH_NAMES: MONTH_NAMES, DEFAULT_ROUTE: DEFAULT_ROUTE, PROJECTS: PROJECTS };
+  var API = { SPOTS: SPOTS, MONTH_NAMES: MONTH_NAMES, DEFAULT_ROUTE: DEFAULT_ROUTE,
+              ROUTE_PRESETS: ROUTE_PRESETS, PROJECTS: PROJECTS };
   root.SFSPOTS = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SWELL FUND — financial model
+   BE THE BEACON — financial model
    Every number here traces to the source CSV unless marked ADDED.
    Runs unchanged in the browser (global SF) and in node (module.exports).
    ========================================================================== */
@@ -56,14 +56,14 @@
   // Variable travel burn by region (CSV: Travel Burn)
   var REGIONS = [
     { id: 'csa', label: 'Central & South America', short: 'Americas', amount: 3000, color: '#BF8430', note: 'Housing, food, local transport, in-country surf travel.' },
-    { id: 'aus', label: 'Australia (van life)', short: 'Australia', amount: 4000, color: '#18A276', note: 'Fuel, campsites, food, insurance, repairs. Excludes the van itself.' },
+    { id: 'aus', label: 'Australia & New Zealand (van life)', short: 'AUS & NZ', amount: 4000, color: '#18A276', note: 'Fuel, campsites, food, insurance, repairs. Excludes the van itself. New Zealand runs a shade cheaper than Australia but the same order of magnitude.' },
     { id: 'sea', label: 'SE Asia / Sri Lanka / Indo / Philippines', short: 'SE Asia', amount: 2500, color: '#4487DE', note: 'Cheapest region by a wide margin.' }
   ];
 
   // One-time trip costs (CSV: Travel Burn one-time, + ADDED)
   var ONETIME = [
     { id: 'longHaul', label: 'Long-haul flights + board fees', amount: 6000, conf: 'Planning', scales: true, note: 'Major continent repositioning. 24-month planning value; scales with trip length.' },
-    { id: 'van', label: 'Australia van: buy/sell loss + repairs', amount: 4000, conf: 'Planning', needsAus: true, note: 'Net loss after resale, plus setup and repairs. Drops to $0 if you skip Australia.' },
+    { id: 'van', label: 'Van: buy/sell loss + repairs', amount: 4000, conf: 'Planning', needsAus: true, note: 'Net loss after resale, plus setup and repairs. One van covers Australia; a second southern-winter leg or a New Zealand hop may mean buying twice. Drops to $0 if you skip Oceania.' },
     { id: 'charter', label: 'Boat charter / liveaboard block', amount: 0, conf: 'ADDED', added: true, charter: true, note: 'ADDED — not in your CSV. Mentawai or Maldives charters run $1,800–4,500 per week per person; a bareboat yacht in Indo or Tonga runs higher. Set weeks and rate below.' }
   ];
 
@@ -424,7 +424,7 @@
       { label: 'Travel lean (0.8× lifestyle)', patch: { lifestyle: 0.8 } },
       { label: 'Kill storage, vehicle, subscriptions', patch: { fixed: Object.assign({}, state.fixed, { storage: 0, vehicle: 0, fun: 0, software: 40 }) } },
       { label: 'Sell the condo instead of renting it', patch: { fixed: Object.assign({}, state.fixed, { condoShortfall: 0, propMgmt: 0, condoReserve: 0 }) } },
-      { label: 'Swap Australia for more SE Asia', patch: swapAus(state) },
+      { label: 'Swap Australia and NZ for more SE Asia', patch: swapAus(state) },
       { label: 'Skip the boat charter', patch: { charterOn: false } },
       { label: 'Drop the landing fund to $10k', patch: { landingFund: 10000 } }
     ];

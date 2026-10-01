@@ -1,21 +1,28 @@
-<title>Swell Fund</title>
+<title>Be The Beacon</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;500;700&display=swap">
 <style>/*__CSS__*/</style>
 
 <header class="topbar">
-  <div class="brand"><b>Swell&nbsp;Fund</b><span>Runway &amp; route · 2026–2029</span></div>
+  <div class="brand"><b>Be&nbsp;The&nbsp;Beacon</b><span>Runway &amp; route · 2026–2029</span></div>
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button role="tab" data-tab="treasure" aria-selected="true" aria-controls="treasure">Treasure</button>
     <button role="tab" data-tab="adventure" aria-selected="false" aria-controls="adventure">Adventure</button>
     <button role="tab" data-tab="integrity" aria-selected="false" aria-controls="integrity">Integrity</button>
+    <button role="tab" data-tab="research" aria-selected="false" aria-controls="research">Research</button>
   </nav>
   <span class="verdict no" id="verdict"><span class="dot"></span>Loading</span>
-  <button class="ghost" data-reset>Reset to CSV</button>
+  <span class="savechip" id="savechip"><span class="dot"></span>Saved</span>
+  <button class="ghost" data-datatoggle>Backup</button>
 </header>
 
 <main class="wrap">
+
+  <details id="datapanel" class="card" style="margin-bottom:16px">
+    <summary>Saving &amp; backup<span class="rule"></span></summary>
+    <div class="details-body" id="databody"></div>
+  </details>
 
   <!-- ================= TREASURE ================= -->
   <section id="treasure" class="stack" role="tabpanel" aria-label="Treasure — the financial model">
@@ -97,7 +104,8 @@
     </div>
 
     <div class="card" id="course-card">
-      <div class="card-h">The course<span class="rule"></span><em>Reorder, restretch, remove</em></div>
+      <div class="card-h">The course<span class="rule"></span><em>Drag to reorder</em></div>
+      <div class="presets" id="presets"></div>
       <div id="coursefoot"></div>
       <div class="legs" id="course"></div>
     </div>
@@ -168,10 +176,59 @@
 
   </section>
 
-  <p class="foot-note" style="margin-top:26px">Built from your planning CSV. Placeholder lines are marked in the audit trail; three recurring lines the CSV missed are marked <span class="tag added">Added</span>. Nothing is saved anywhere but this browser — your figures never leave the page.</p>
+
+  <!-- ================= RESEARCH ================= -->
+  <section id="research" class="stack" role="tabpanel" aria-label="Research — people and projects along the route" hidden>
+
+    <div class="split hero">
+      <div class="stack">
+        <div class="kpis" id="res-kpis"></div>
+        <div class="card">
+          <div class="card-h">Coverage by leg<span class="rule"></span><em>Where you have nobody yet</em></div>
+          <div id="res-coverage"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h">Add a lead<span class="rule"></span><em>Enter to save</em></div>
+        <form id="resform" autocomplete="off">
+          <input type="text" id="res-org" placeholder="Organisation or project" aria-label="Organisation or project" style="margin-bottom:8px">
+          <input type="text" id="res-what" placeholder="What do they do?" aria-label="What do they do" style="margin-bottom:8px">
+          <input type="text" id="res-url" placeholder="Link (optional)" aria-label="Link" style="margin-bottom:10px">
+          <div class="addrow">
+            <select id="res-spot" aria-label="Where"></select>
+            <select id="res-theme" aria-label="Theme"></select>
+            <button type="submit" class="add">Add</button>
+          </div>
+        </form>
+        <div class="card-h" style="margin-top:20px">By theme<span class="rule"></span></div>
+        <div id="res-themes"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">The pipeline<span class="rule"></span><em>Drag a card to move it along</em></div>
+      <div class="chipbar" id="res-filter" style="margin-bottom:14px"></div>
+      <div class="board" id="res-board"></div>
+    </div>
+
+    <div class="split-even">
+      <div class="card">
+        <div class="card-h">The standing questions<span class="rule"></span><em>Ask everyone the same eight</em></div>
+        <div id="res-questions"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">How to work this<span class="rule"></span></div>
+        <div id="res-how"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <p class="foot-note" style="margin-top:26px">Built from your planning CSV. Placeholder lines are marked in the audit trail; three recurring lines the CSV missed are marked <span class="tag added">Added</span>. Your figures are stored in this browser, and synced to your account when you open this from Claude. Either way, take a backup file from the panel at the top whenever you have made real progress.</p>
 </main>
 
 <script>/*__MODEL__*/</script>
 <script>/*__SPOTS__*/</script>
 <script>/*__TASKS__*/</script>
+<script>/*__RESEARCH__*/</script>
 <script>/*__APP__*/</script>

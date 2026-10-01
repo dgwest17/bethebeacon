@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SWELL FUND — Integrity: the list of things you said you'd do.
+   BE THE BEACON — Integrity: the list of things you said you'd do.
    Two lists (before you leave / on the road), one bucket for what's locked in.
    ========================================================================== */
 (function (root) {
