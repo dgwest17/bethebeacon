@@ -112,7 +112,21 @@ ok('route trajectory ends at ending cash', Math.abs(rs.traj[rs.traj.length-1].ca
 ok('charter lands in a real month', rs.traj.filter(p => /charter/i.test(p.note||'')).length === 1);
 ok('van cost charged once', rs.traj.filter(p => /Van purchase/.test(p.note||'')).length === 1);
 const hops = rs.traj.filter(p => /Long-haul/.test(p.note||'')).length;
-ok('long-haul legs = region changes', hops === 4, hops + ' hops');
+let changes = 0, prevR = null;
+rs.sched.forEach(s2 => { if (s2.rid !== prevR) changes++; prevR = s2.rid; });
+ok('long-haul legs = region changes', hops === changes, hops + ' charged, ' + changes + ' region changes');
+ok('every default leg is in its season', (() => {
+  let m = rs.M + 1, bad = 0;
+  route.forEach(l => {
+    const sp = byId[l.spot];
+    for (let i = 0; i < l.months; i++) {
+      const d = SF.addMonths(SF.TODAY, m + i);
+      if (!sp.season.includes(d.getMonth() + 1)) bad++;
+    }
+    m += l.months;
+  });
+  return bad === 0;
+})());
 console.log('\n=== LEVER RANK ===');
 SF.leverRank(Object.assign(SF.clone(SF.DEFAULTS), { route: route, useRouteCosts: true }))
   .forEach(l => console.log('  ' + f(l.saves).padStart(10) + '  ' + l.label));
